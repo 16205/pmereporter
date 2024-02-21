@@ -1,6 +1,7 @@
 import os
 import requests
 import utils
+import sys
 from datetime import datetime
 
 from dotenv import load_dotenv
@@ -15,27 +16,35 @@ headers = {
         'Content-Type': 'application/json'
     }
 
-def get_events(dateFrom:datetime=None, dateTo:datetime=None, departments:list=None, resources:list=None):
+def get_events(dateFrom:datetime=None, dateTo:datetime=None, departments:list=None, resources:list=None, 
+               categories:list=[52,60,63,65,78,80]):
     dateFrom, dateTo = utils.format_date(dateFrom), utils.format_date(dateTo)
     
     json = {
         "dateFrom": dateFrom,
         "dateTo": dateTo,
+        "departments": departments,
+        "resources": resources,
+        "categories": categories,
+        "results": "Task"
     }
-
-    if departments != None:
-        json['departments'] = departments
-    if resources != None:
-        json['resources'] = resources
+    # TODO: calculate datetime 1 day diff
+    # TODO: use kwargs
+    # if departments != None:
+    #     json['departments'] = departments
+    # if resources != None:
+    #     json['resources'] = resources
+    # if categories != None:
+    #     json['categories'] = categories
 
     # TODO: handle error if bad bearer token and other errors
-    response = requests.post(connection_str + 'do/list', headers=headers, json=json)
+    response = requests.post( connection_str + 'do/list', headers=headers, json=json)
 
     if response.status_code == 200:
         return response
     
     else:
-        print("Failed to retrieve data:", response.status_code)
+        sys.exit(f"Failed to retrieve data: {response.status_code}")
 
 def get_departments(id:int=None):
     
@@ -51,3 +60,7 @@ def get_departments(id:int=None):
 
     return response
 
+def get_categories():
+    response = requests.get(connection_str + 'category', headers=headers)
+
+    return response
