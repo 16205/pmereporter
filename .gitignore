@@ -160,3 +160,9 @@ cython_debug/
 #.idea/
 
 example.txt
+example2.txt
+example30.txt
+generated/*
+media/*
+test.py
+reqsim.py
