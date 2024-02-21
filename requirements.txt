@@ -1,4 +1,5 @@
 python-dotenv
-ironpdf
 pywin32
 requests
+reportlab
+tqdm
