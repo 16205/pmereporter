@@ -18,4 +18,15 @@ with open('example.txt', 'w') as file:
         file.write(json.dumps(response.json(), indent=4))
 
 def generate(date:datetime):
+    # Call ingest.get_events()                      (PPME       in  )
+    # Call ingest.get_locations()                   (PPME       in  )
+    # Call ingest.get_sources()                     (SharePoint in  )
+    # Feed results into process.generate_pdfs()     (Internal       )
+    # Call ???outbound???.send_mission_orders()     (Outlook    out )
+    pass
+
+def check_mat_double_booking():
+    # Call ingest.get_events()
+    # Call ingest.get_sources()
+    # Feed results into process.check_conflicts
     pass
