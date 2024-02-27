@@ -8,7 +8,7 @@ load_dotenv(override=True)
 
 connection_str = os.environ['HOST'] + 'token'
 
-def authenticate():
+def authenticate_to_ppme():
     headers = {
         'X-APPKEY': os.environ['APPKEY']
     }

@@ -4,7 +4,7 @@ import auth
 import process
 import json
 
-# auth.authenticate()
+# auth.authenticate_to_ppme()
 
 dateFrom = datetime(2023, 11, 21)
 dateTo = datetime(2023, 11, 21, 23, 59, 59, 999)

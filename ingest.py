@@ -38,7 +38,7 @@ def get_events(dateFrom:datetime=None, dateTo:datetime=None, departments:list=No
     #     json['categories'] = categories
 
     # TODO: handle error if bad bearer token and other errors
-    response = requests.post( connection_str + 'do/list', headers=headers, json=json)
+    response = requests.post(connection_str + 'do/list', headers=headers, json=json)
 
     if response.status_code == 200:
         return response
