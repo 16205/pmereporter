@@ -1,7 +1,8 @@
 import os
 import requests
 import utils
-
+from office365.runtime.auth.authentication_context import AuthenticationContext
+from office365.sharepoint.client_context import ClientContext
 from dotenv import load_dotenv
 
 load_dotenv(override=True)
@@ -27,3 +28,9 @@ def authenticate_to_ppme():
         return
     else:
         print("Failed to retrieve data:", response.status_code)
+
+def authenticate_to_shpt():
+    pass
+
+def authenticate_to_mail():
+    pass
