@@ -23,10 +23,10 @@ def generate_pdfs(missions, locations, sources):
         resources = {}
         customers = {}
         for resource in mission["resources"]:
-            if not resource['label'].startswith("RG -") and not resource['label'].startswith("BUNKER ") and not resource['label'].startswith("Vincotte"):
-                resources[f"{resource['key']}"] = {'name': resource['label'], 'phone': resource['mobile']}
+            if not resource['label'].startswith("RG -") and not resource['label'].startswith("BUNKER ") and not resource['label'].startswith("Vincotte") and not resource['label'].startswith("LABO "):
+                resources[f"{resource['key']}"] = {'name': resource['label'], 'phone1': resource['mobile'], 'phone2': resource['phone']}
         for customer in mission["customers"]:
-            customers[f"{customer['key']}"] = {'name': customer['label'], 'phone': customer['phone']}
+            customers[f"{customer['key']}"] = {'name': customer['label'], 'phone1': customer['phone'], 'phone2': customer['mobile']}
         
         # Create a PDF document
         doc = SimpleDocTemplate(f".\generated\{mission['key']}.pdf", pagesize=A4, leftmargin=50, topMargin=100)
@@ -60,19 +60,43 @@ def generate_pdfs(missions, locations, sources):
         
         # Agents
         for index, item in enumerate(resources):
-            agent_label = "<b>Agent</b><br/><br/>" if len(resources) == 1 else f"<b>Agent {index+1}</b><br/><br/>"
-            agent_phone_label = "<b>Phone</b>"
-            mission_table_data.append([Paragraph(agent_label+agent_phone_label), 
-                                       Paragraph(f"{resources[item]['name']}<br/><br/>{resources[item]['phone']}")])
+            agent_name_label = "<b>Agent</b><br/><br/>" if len(resources) == 1 else f"<b>Agent {index+1}</b><br/><br/>"
+            agent_name = resources[item]['name']+"<br/>"
             
-
+            agent_phone_label = "<b>Phone</b>"
+            agent_phone1 = ""
+            agent_phone2 = ""
+            if resources[item]['phone1'] != '+32' and not None:
+                agent_phone1 = "<br/>"+resources[item]['phone1']
+            if resources[item]['phone2'] != '+32' and not None:
+                if resources[item]['phone2'] != resources[item]['phone1']:
+                    agent_phone2 = "<br/>"+resources[item]['phone2']
+            
+            mission_table_data.append([Paragraph(agent_name_label+agent_phone_label), 
+                                       Paragraph(agent_name+agent_phone1+agent_phone2)])
+            
         # Clients
         for index, item in enumerate(customers):
-            client_label = "<b>Client</b><br/><br/>" if len(customers) == 1 else f"<b>Client {index+1}</b><br/><br/>"    
-            client_phone_label = "<b>Phone</b>"
-            mission_table_data.append([Paragraph(client_label+client_phone_label), 
-                                       Paragraph(f"{customers[item]['name']}<br/><br/>{customers[item]['phone']}")])
+            client_name_label = "<b>Client</b><br/><br/>" if len(customers) == 1 else f"<b>Client {index+1}</b><br/><br/>"    
+            client_name = customers[item]['name']+"<br/>"
 
+            client_phone_label = "<b>Phone</b>"
+            client_phone1 = ""
+            client_phone2 = ""
+            if customers[item]['phone1'] != '+32' and not None:
+                client_phone1 = "<br/>"+customers[item]['phone1']
+            if customers[item]['phone2'] != '+32' and not None:
+                if customers[item]['phone2'] != customers[item]['phone1']:
+                    client_phone2 = "<br/>"+customers[item]['phone2']
+            
+            mission_table_data.append([Paragraph(client_name_label+client_phone_label), 
+                                       Paragraph(client_name+client_phone1+client_phone2)])
+
+        # Service order number
+        if 'project' in mission and mission['project']['fields']['PROJET_SO_NUMBER'] is not None:
+            so_number = (mission['project']['fields']['PROJET_SO_NUMBER']).lstrip("0")
+            mission_table_data.append([Paragraph("<b>Service order n°</b>"), Paragraph(f"{so_number}")])
+        
         # Location
         mission_table_data.append([Paragraph("<b>Intervention location</b>"), Paragraph(f"")])
 
@@ -80,9 +104,17 @@ def generate_pdfs(missions, locations, sources):
         if mission['fields']['DEPARTUREPLACE'] is not None:
             mission_table_data.append([Paragraph("<b>Departure location</b>"), Paragraph(f"{mission['fields']['DEPARTUREPLACE']}")])
 
-        # Remarks
+        # Info/comments
+        comments1 = ""
+        comments2 = ""
+        if mission['fields']['COMMENTS_LOCATION'] is not None:
+            comments1 = mission['fields']['COMMENTS_LOCATION']
         if mission['remark'] is not None:
-            mission_table_data.append([Paragraph("<b>Comments/Remarks</b>"), Paragraph(f"{mission['remark']}")])
+            comments2 = mission['remark']
+        if comments1 and comments2 != "":
+            comments1 += "<br/>----------------------------------------------------------------------------------------------<br/>"
+        mission_table_data.append([Paragraph("<b>Remarks/comments</b>"), 
+                                   Paragraph(comments1+comments2)])        
 
         # Create the table with the data
         mission_table = Table(mission_table_data, colWidths=[111, None])
@@ -104,8 +136,8 @@ def generate_pdfs(missions, locations, sources):
         # Add table to list of flowables
         elements.append(mission_table)
 
-        if sources is None:
-            # ADR Information Heading -------------------------------------
+        # ADR Information Heading -------------------------------------
+        if sources is not None:
             elements.append(PageBreak())
             elements.append(Paragraph("<b>ADR Information</b>", styles['Heading2']))
 
@@ -126,7 +158,7 @@ def add_header_footer(canvas, doc):
     # Footer
     footer_text = "Page %d" % doc.page
     canvas.setFont("Helvetica", 10)
-    canvas.drawString(75, 20, footer_text)  # Adjust coordinates as needed
+    canvas.drawString(75, 30, footer_text)  # Adjust coordinates as needed
 
     # Logo image to include
     logo1_path = "media\Vincotte_RGB_H.png"
