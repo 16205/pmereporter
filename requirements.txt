@@ -1,6 +1,6 @@
 python-dotenv
-pywin32
 requests
 reportlab
 tqdm
 Office365-REST-Python-Client
+exchangelib
