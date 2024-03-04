@@ -64,3 +64,6 @@ def get_categories():
     response = requests.get(connection_str + 'category', headers=headers)
 
     return response
+
+def get_locations():
+    pass
