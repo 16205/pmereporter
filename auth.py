@@ -4,6 +4,10 @@ import utils
 from office365.runtime.auth.authentication_context import AuthenticationContext
 from office365.sharepoint.client_context import ClientContext
 from dotenv import load_dotenv
+from exchangelib import Account, OAuth2Credentials, Configuration, Identity
+from office365.runtime.auth.client_credential import ClientCredential
+from office365.sharepoint.client_context import ClientContext
+
 
 load_dotenv(override=True)
 
@@ -30,7 +34,34 @@ def authenticate_to_ppme():
         print("Failed to retrieve data:", response.status_code)
 
 def authenticate_to_shpt():
+    site_url = "https://yourtenant.sharepoint.com/sites/yoursite"
+    client_id = "your-client-id"
+    client_secret = "your-client-secret"
+
+    client_credential = ClientCredential(client_id, client_secret)
+    ctx = ClientContext(site_url).with_credentials(client_credential)
+
+    # Now you can interact with SharePoint resources
+
     pass
 
 def authenticate_to_mail():
+    # OAuth2 credentials and configuration
+    client_id = 'your-client-id'
+    client_secret = 'your-client-secret'  # Only needed for confidential clients
+    tenant_id = 'your-tenant-id'
+    account_email = 'user@example.com'
+
+    credentials = OAuth2Credentials(
+        client_id=client_id,
+        client_secret=client_secret,  # Leave out if using a public client
+        tenant_id=tenant_id,
+        identity=Identity(primary_smtp_address=account_email)
+    )
+
+    config = Configuration(server='outlook.office365.com', credentials=credentials)
+    account = Account(primary_smtp_address=account_email, config=config, autodiscover=False, access_type='impersonation')
+
+    # Now you can use the account object to send emails, access mailbox items, etc.
+
     pass
