@@ -13,11 +13,11 @@ def get_resources_from_departments(departments):
 
     return keys
 
-def get_locations():
+def add_locations():
     pass
 
-def generate_pdfs(missions, locations, sources):
-
+def generate_pdfs(missions, sources=None):
+    print("Generating pdfs...")
     # Parse JSON data
     for mission in tqdm(missions["items"]):
         resources = {}
@@ -99,7 +99,8 @@ def generate_pdfs(missions, locations, sources):
             mission_table_data.append([Paragraph("<b>Service order n°</b>"), Paragraph(f"{so_number}")])
         
         # Location
-        mission_table_data.append([Paragraph("<b>Intervention location</b>"), Paragraph(f"")])
+        if 'location' in mission and mission['location'] is not None:
+            mission_table_data.append([Paragraph("<b>Intervention location</b>"), Paragraph(f"{mission['location']}")])
 
         # Departure location
         if mission['fields']['DEPARTUREPLACE'] is not None:
@@ -162,6 +163,8 @@ def generate_pdfs(missions, locations, sources):
 
         # Build the PDF document
         doc.build(elements, onFirstPage=add_header_footer, onLaterPages=add_header_footer)
+
+    print("Pdfs generated!")
     return
 
 def add_header_footer(canvas, doc):
