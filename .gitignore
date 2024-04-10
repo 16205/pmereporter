@@ -166,3 +166,4 @@ generated/*
 media/*
 test.py
 reqsim.py
+testSHP.py
