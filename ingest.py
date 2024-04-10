@@ -43,6 +43,8 @@ def get_events(dateFrom:datetime=None, dateTo:datetime=None, departments:list=No
     if response.status_code == 200:
         return response
     
+    elif response.status_code == 401:
+        sys.exit(f"Please authenticate before requesting for data. {response.status_code} Unauthorized.")
     else:
         sys.exit(f"Failed to retrieve data: {response.status_code}")
 
