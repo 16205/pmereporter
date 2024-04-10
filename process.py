@@ -13,7 +13,7 @@ def get_resources_from_departments(departments):
 
     return keys
 
-def add_mission_location_intervention():
+def get_locations():
     pass
 
 def generate_pdfs(missions, locations, sources):
@@ -21,13 +21,14 @@ def generate_pdfs(missions, locations, sources):
     # Parse JSON data
     for mission in tqdm(missions["items"]):
         resources = {}
-        customers = {}
+        # customers = {}
         for resource in mission["resources"]:
             if not resource['label'].startswith("RG -") and not resource['label'].startswith("BUNKER ") and not resource['label'].startswith("Vincotte") and not resource['label'].startswith("LABO "):
                 resources[f"{resource['key']}"] = {'name': resource['label'], 'phone1': resource['mobile'], 'phone2': resource['phone']}
-        for customer in mission["customers"]:
-            customers[f"{customer['key']}"] = {'name': customer['label'], 'phone1': customer['phone'], 'phone2': customer['mobile']}
-        
+        # for customer in mission["customers"]:
+        #     # customers[f"{customer['key']}"] = {'name': customer['label'], 'phone1': customer['phone'], 'phone2': customer['mobile']}
+        #     customers['key'] = customer
+
         # Create a PDF document
         doc = SimpleDocTemplate(f".\generated\{mission['key']}.pdf", pagesize=A4, leftmargin=50, topMargin=100)
 
@@ -76,18 +77,18 @@ def generate_pdfs(missions, locations, sources):
                                        Paragraph(agent_name+agent_phone1+agent_phone2)])
             
         # Clients
-        for index, item in enumerate(customers):
-            client_name_label = "<b>Client</b><br/><br/>" if len(customers) == 1 else f"<b>Client {index+1}</b><br/><br/>"    
-            client_name = customers[item]['name']+"<br/>"
+        for index, item in enumerate(mission['customers']):
+            client_name_label = "<b>Client</b><br/><br/>" if len(mission['customers']) == 1 else f"<b>Client {index+1}</b><br/><br/>"    
+            client_name = mission['customers'][index]['label']+"<br/>"
 
             client_phone_label = "<b>Phone</b>"
             client_phone1 = ""
             client_phone2 = ""
-            if customers[item]['phone1'] != '+32' and not None:
-                client_phone1 = "<br/>"+customers[item]['phone1']
-            if customers[item]['phone2'] != '+32' and not None:
-                if customers[item]['phone2'] != customers[item]['phone1']:
-                    client_phone2 = "<br/>"+customers[item]['phone2']
+            if mission['customers'][index]['phone'] != '+32' and not None:
+                client_phone1 = "<br/>"+mission['customers'][index]['phone']
+            if mission['customers'][index]['mobile'] != '+32' and not None:
+                if mission['customers'][index]['mobile'] != mission['customers'][index]['phone']:
+                    client_phone2 = "<br/>"+mission['customers'][index]['mobile']
             
             mission_table_data.append([Paragraph(client_name_label+client_phone_label), 
                                        Paragraph(client_name+client_phone1+client_phone2)])
@@ -107,14 +108,26 @@ def generate_pdfs(missions, locations, sources):
         # Info/comments
         comments1 = ""
         comments2 = ""
+        comments3 = ""
+        comments4 = ""
         if mission['fields']['COMMENTS_LOCATION'] is not None:
             comments1 = mission['fields']['COMMENTS_LOCATION']
         if mission['remark'] is not None:
             comments2 = mission['remark']
-        if comments1 and comments2 != "":
-            comments1 += "<br/>----------------------------------------------------------------------------------------------<br/>"
+        if 'TASKCOMMENTS' in mission['fields']:
+            if mission['fields']['TASKCOMMENTS'] is not None:
+                comments3 = mission['fields']['TASKCOMMENTS']
+        for index, item in enumerate(mission['customers']):
+            if 'COMMENTSCUSTOMER' in mission['customers'][index]['fields']:
+                if mission['customers'][index]['fields']['COMMENTSCUSTOMER'] is not None:
+                    comments4 = mission['customers'][index]['fields']['COMMENTSCUSTOMER']
+        
+        comments = [comments1, comments2, comments3, comments4]
+        separator = "<br/>----------------------------------------------------------------------------------------------<br/>"
+        comments_paragraph = separator.join([comment for comment in comments if comment])
+        
         mission_table_data.append([Paragraph("<b>Remarks/comments</b>"), 
-                                   Paragraph(comments1+comments2)])        
+                                   Paragraph(comments_paragraph)])        
 
         # Create the table with the data
         mission_table = Table(mission_table_data, colWidths=[111, None])
