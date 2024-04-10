@@ -29,32 +29,32 @@ def authenticate_to_ppme():
         # Using '.get()' so it returns {} if key 'access_token' does not exist
         bearer_token = data.get('access_token', {})
         utils.update_token_env(bearer_token)
+        print("Successfully authenticated")
         return
     else:
-        print("Failed to retrieve data:", response.status_code)
+        # TODO: Investigate whether to replace print with sys.exit()
+        print("Failed to authenticate:", response.status_code)
 
 def authenticate_to_shpt():
-    site_url = "https://yourtenant.sharepoint.com/sites/yoursite"
-    client_id = "your-client-id"
-    client_secret = "your-client-secret"
+    site_url = os.environ['SHP_SITE_URL']
+    client_id = os.environ['SHP_CLIENT_ID']
+    client_secret = os.environ['SHP_CLIENT_SECRET']
 
     client_credential = ClientCredential(client_id, client_secret)
     ctx = ClientContext(site_url).with_credentials(client_credential)
 
-    # Now you can interact with SharePoint resources
-
-    pass
+    return ctx
 
 def authenticate_to_mail():
     # OAuth2 credentials and configuration
     client_id = 'your-client-id'
-    client_secret = 'your-client-secret'  # Only needed for confidential clients
+    client_secret = 'your-client-secret'
     tenant_id = 'your-tenant-id'
     account_email = 'user@example.com'
 
     credentials = OAuth2Credentials(
         client_id=client_id,
-        client_secret=client_secret,  # Leave out if using a public client
+        client_secret=client_secret,
         tenant_id=tenant_id,
         identity=Identity(primary_smtp_address=account_email)
     )
