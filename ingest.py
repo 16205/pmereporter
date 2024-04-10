@@ -53,7 +53,39 @@ def get_events(dateFrom:datetime, dateTo:datetime=None, departments:list=None, r
     else:
         sys.exit(f"Failed to retrieve data: {response.status_code}")
 
+def get_locations(missions):
+    # Iterate through missions
+    print("Getting locations for every mission...")
+    for mission in tqdm(missions["items"]):
+        # Get mission id (=key)
+        id = mission["key"]
 
+        # Query for mission details
+        response = requests.get(connection_str + f"do/{id}", headers=headers)
+
+        if response.status_code == 200:
+            # --------------This part below should be part of a process function, since it is not ingest related
+            # Extract location info in "place" dictionary, out of mission details
+            place = response.json()["place"]
+
+            # Handle case when information is not filled out correctly by planners, that is, zip and city in street field:
+            # Set var adress as being only the "address" field (=street) out of "place" dictionary
+            address = place["address"]
+
+            # Handle case when information is filled out correctly by planners, that is, zip and city in their respective fields
+            if place["zip"] is not None and place["city"] is not None:
+                address += f"<br/>{place['zip']} {place['city']}"
+
+            # Append locations to mission
+            mission["location"] = address
+            
+            print("Got the locations!")
+            return missions
+
+        elif response.status_code == 401:
+            sys.exit(f"Please authenticate to PlanningPME API before requesting for data. {response.status_code} Unauthorized.")
+        else:
+            sys.exit(f"Failed to retrieve data: {response.status_code}")
 
 def get_departments(id:int=None):
     
