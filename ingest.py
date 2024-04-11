@@ -1,3 +1,4 @@
+import auth
 import os
 import requests
 import utils
@@ -78,14 +79,32 @@ def get_locations(missions):
 
             # Append locations to mission
             mission["location"] = address
-            
-            print("Got the locations!")
-            return missions
 
         elif response.status_code == 401:
             sys.exit(f"Please authenticate to PlanningPME API before requesting for data. {response.status_code} Unauthorized.")
         else:
             sys.exit(f"Failed to retrieve data: {response.status_code}")
+
+    print("Got the locations!")
+    return missions
+
+def get_sources():
+    print("Getting list of sources...")
+    ctx = auth.authenticate_to_shpt()
+
+    sp_list = ctx.web.lists.get_by_title("Sources")
+
+    sources_list = sp_list.get_items()
+    ctx.load(sources_list)
+    ctx.execute_query()
+
+    sources = {}
+
+    for source in sources_list:
+        sources[source.properties['Title']] = source.properties
+
+    print('Got all sources!')
+    return sources
 
 def get_departments(id:int=None):
     
