@@ -47,10 +47,10 @@ def authenticate_to_shpt():
 
 def authenticate_to_mail():
     # OAuth2 credentials and configuration
-    client_id = 'your-client-id'
-    client_secret = 'your-client-secret'
-    tenant_id = 'your-tenant-id'
-    account_email = 'user@example.com'
+    client_id = os.environ['SHP_CLIENT_ID']
+    client_secret = os.environ['SHP_CLIENT_SECRET']
+    tenant_id = os.environ['TENANT_ID']
+    account_email = 'planNDTsud@vincotte.be'
 
     credentials = OAuth2Credentials(
         client_id=client_id,
