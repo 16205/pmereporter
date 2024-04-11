@@ -25,9 +25,3 @@ def update_token_env(new_token):
     # Write the updated content back to the .env file
     with open(env_file_path, 'w') as file:
         file.writelines(updated_lines)
-
-def format_date(date):
-    # Format datetime as string
-    formatted_str = date.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
-    
-    return formatted_str
