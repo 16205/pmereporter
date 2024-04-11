@@ -21,7 +21,7 @@ headers = {
 def get_events(dateFrom:datetime, dateTo:datetime=None, departments:list=None, resources:list=None, 
                categories:list=[52,60,63,65,78,80]):
     
-    dateFrom, dateTo = utils.format_date(dateFrom), utils.format_date(dateTo)
+    dateFrom, dateTo = dateFrom.isoformat(), dateTo.isoformat()
     
     json = {
         "dateFrom": dateFrom,
