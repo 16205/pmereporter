@@ -1,4 +1,5 @@
 import json
+import sys
 from tqdm import tqdm
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
@@ -16,9 +17,9 @@ def get_resources_from_departments(departments):
 def add_locations():
     pass
 
-def generate_pdfs(missions, sources=None):
+def generate_pdfs(missions, sources):
     print("Generating pdfs...")
-    # Parse JSON data
+
     for mission in tqdm(missions["items"]):
         resources = {}
         # customers = {}
@@ -99,8 +100,11 @@ def generate_pdfs(missions, sources=None):
             mission_table_data.append([Paragraph("<b>Service order n°</b>"), Paragraph(f"{so_number}")])
         
         # Location
-        if 'location' in mission and mission['location'] is not None:
-            mission_table_data.append([Paragraph("<b>Intervention location</b>"), Paragraph(f"{mission['location']}")])
+        if 'location' in mission:
+            if mission['location'] is not None:
+                mission_table_data.append([Paragraph("<b>Intervention location</b>"), Paragraph(f"{mission['location']}")])
+        else: 
+            sys.exit('Mission intervention location missing, please first run ingest.get_locations()!')
 
         # Departure location
         if mission['fields']['DEPARTUREPLACE'] is not None:
@@ -151,15 +155,89 @@ def generate_pdfs(missions, sources=None):
         elements.append(mission_table)
 
         # ADR Information Heading -------------------------------------
-        if sources is not None:
+        if mission['fields']['SOURCES'] is not None or mission['fields']['SOURCESII'] is not None or mission['fields']['SOURCESIII'] is not None:
             elements.append(PageBreak())
-            elements.append(Paragraph("<b>ADR Information</b>", styles['Heading2']))
+            elements.append(Paragraph("<b>ADR Informatie<br/><i>Information ADR</i></b>", styles['Heading2']))
 
             # Description
             elements.append(Paragraph("<b>Marchandises ADR transportées:<br/>Getransporteerde ADR stoffen:</b>", styles['Heading3']))
             
-            # UN number & description
-            elements.append(Paragraph(f""))
+            # Set variables containing sources identification
+            mission_sources = []
+
+            if mission['fields']['SOURCES'] != "" and not None:
+                mission_sources.append(mission['fields']['SOURCES'])
+            if mission['fields']['SOURCESII'] != "" and not None:
+                mission_sources.append(mission['fields']['SOURCESII'])
+            if mission['fields']['SOURCESIII'] != "" and not None:
+                mission_sources.append(mission['fields']['SOURCESIII'])
+            
+            for source in mission_sources:
+                # Table data
+                ADR_table_data = []
+
+                # Source internal identification (Vincotte)
+                ADR_table_data.append([Paragraph(f"<b>Identification:</b>"),
+                                       Paragraph(f"{source}")])
+                
+                # UN Number & description
+                UN_number = sources[source]['UNnumber']
+                description = sources[source]['ADRDescription']
+                ADR_table_data.append([Paragraph(f"<b>UN Number & description:</b>"),
+                                       Paragraph(f"{UN_number} {description}")])
+                
+                # Isotope
+                isotope = sources[source]['Isotope']
+                ADR_table_data.append([Paragraph(f"<b>Isotope:</b>"),
+                                       Paragraph(f"{isotope}")])
+                
+                # Max activity
+                max_activity = sources[source]['GBq']
+                ADR_table_data.append([Paragraph(f"<b>Max activity (A0) [GBq]:</b>"),
+                                       Paragraph(f"{max_activity}")])
+                
+                # Package category
+                pckg_category = sources[source]['Label']
+                ADR_table_data.append([Paragraph(f"<b>Package category label:</b>"),
+                                       Paragraph(f"{pckg_category}")])
+                
+                # Transport index
+                transport_index = sources[source]['Transportindex']
+                ADR_table_data.append([Paragraph(f"<b>Transport index:</b>"),
+                                       Paragraph(f"{transport_index}")])
+                
+                # Physical state
+                physical_state = sources[source]['Physicalstate']
+                ADR_table_data.append([Paragraph(f"<b>Physical state:</b>"),
+                                       Paragraph(f"{physical_state}")])
+                
+                # Certificate
+                certificate = sources[source]['Certificate']
+                ADR_table_data.append([Paragraph(f"<b>Certificate:</b>"),
+                                       Paragraph(f"{certificate}")])
+
+                # Create the table with the data
+                ADR_table = Table(ADR_table_data, colWidths=[111, None])
+
+                # Define a TableStyle
+                style = TableStyle([
+                    ('TEXTCOLOR', (0,0), (-1,0), colors.black),
+                    ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+                    ('VALIGN', (0,0), (-1,-1), 'TOP'),
+                    ('FONTNAME', (0,0), (-1,0), 'Helvetica'),
+                    ('BOTTOMPADDING', (0,0), (-1,-1), 5),
+                    ('TOPPADDING', (0,0), (-1,-1), 5),
+                    ('GRID', (0,0), (-1,-1), 1, colors.black),
+                ])
+
+                # Apply the style to the table
+                ADR_table.setStyle(style)
+
+                # Add table to list of flowables
+                elements.append(ADR_table)
+
+                elements.append(Spacer(1, 10))
+        
 
         # Build the PDF document
         doc.build(elements, onFirstPage=add_header_footer, onLaterPages=add_header_footer)
