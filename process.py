@@ -5,7 +5,8 @@ from tqdm import tqdm
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Frame, Spacer, PageBreak
-from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_JUSTIFY
 from datetime import datetime
 
 def get_resources_from_departments(departments):
@@ -21,6 +22,11 @@ def add_locations():
 def generate_pdfs(missions, sources):
     print("Generating pdfs...")
 
+    # Define styles
+    styles = getSampleStyleSheet()
+    styles.add(ParagraphStyle(name='Justify', parent=styles['Normal'], fontSize=10, fontName='Helvetica', alignment=TA_JUSTIFY,))
+    smaller_font_style = ParagraphStyle('SmallerFont', parent=styles['Normal'], fontSize=9, fontName='Helvetica')
+
     for mission in tqdm(missions["items"]):
         resources = {}
         # customers = {}
@@ -32,18 +38,14 @@ def generate_pdfs(missions, sources):
         #     customers['key'] = customer
 
         # Create a PDF document
-        doc = SimpleDocTemplate(f".\generated\{mission['key']}.pdf", pagesize=A4, leftmargin=50, topMargin=100)
-
-        # Define styles
-        styles = getSampleStyleSheet()
+        doc = SimpleDocTemplate(f".\generated\{mission['key']}.pdf", pagesize=A4, topMargin=100)
 
         # Create content elements
         elements = []
 
-        # Add content
-
+        # Add content:
         # Title
-        elements.append(Paragraph(f"Mission order n° {mission['key']} - Vinçotte", styles['Title']))
+        elements.append(Paragraph(f"Mission order n° {mission['key']} - Vinçotte NDT", styles['Title']))
         elements.append(Spacer(1, 10))
 
         # Mission details heading -------------------------------------
@@ -133,7 +135,7 @@ def generate_pdfs(missions, sources):
         comments_paragraph = separator.join([comment for comment in comments if comment])
         
         mission_table_data.append([Paragraph("<b>Remarks/comments</b>"), 
-                                   Paragraph(comments_paragraph)])        
+                                   Paragraph(comments_paragraph, styles['Justify'])])        
 
         # Create the table with the data
         mission_table = Table(mission_table_data, colWidths=[111, None])
@@ -145,7 +147,7 @@ def generate_pdfs(missions, sources):
             ('VALIGN', (0,0), (-1,-1), 'TOP'),
             ('BOTTOMPADDING', (0,0), (-1,-1), 5),
             ('TOPPADDING', (0,0), (-1,-1), 5),
-            ('GRID', (0,0), (-1,-1), 1, colors.black),
+            ('GRID', (0,0), (-1,-1), 1, colors.darkslategray),
         ])
 
         # Apply the style to the table
@@ -154,11 +156,24 @@ def generate_pdfs(missions, sources):
         # Add table to list of flowables
         elements.append(mission_table)
 
-        # ADR Information Heading -------------------------------------
+        # ADR Information -------------------------------------
+        # Check if RT mission
         if mission['fields']['SOURCES'] is not None or mission['fields']['SOURCESII'] is not None or mission['fields']['SOURCESIII'] is not None:
             elements.append(PageBreak())
             elements.append(Paragraph("<b>ADR Informatie / Information ADR</b>", styles['Heading2']))
 
+            # Sender / Receiver table
+            s_r_table_data = []
+            s_r_table_data.append([Paragraph("<b>Verzender / Expéditeur</b>"),
+                                   Paragraph("<b>Bestemmeling / Destinataire</b>")])
+            addresses = {'Villers-Le-Bouillet': 'Rue de la métallurgie 47<br/>4530 Villers-Le-Bouillet',
+                         'Houdeng': 'Chaussée Paul Houtart 88<br/>7100 Houdeng-Goegnies'}
+            s_r_table_data.append([Paragraph(f"Vinçotte NV<br/><br/>{addresses.get(mission['fields']['DEPARTUREPLACE'])}"),
+                                   Paragraph(f"{client_name}<br/>{mission['location']}")])
+            s_r_table = Table(s_r_table_data)
+            s_r_table.setStyle(style)
+            elements.append(s_r_table)
+            
             # Description
             elements.append(Paragraph("<b>Getransporteerde ADR stoffen: / Marchandises ADR transportées:</b>", styles['Heading3']))
             
@@ -172,69 +187,83 @@ def generate_pdfs(missions, sources):
             if mission['fields']['SOURCESIII'] != "" and not None:
                 mission_sources.append(mission['fields']['SOURCESIII'])
             
+            i=1
             for source in mission_sources:
+                if len(mission_sources)>1:
+                    elements.append(Paragraph(f"<b>Isotope {i}</b>", styles['Heading4']))
+                    i+=1
+
                 # Table data
                 ADR_table_data = []
 
                 # Source internal identification (Vincotte)
-                ADR_table_data.append([Paragraph(f"<b>Identificatie/ <br/>Identification</b>"),
-                                       Paragraph(f"{source}")])
+                ADR_table_data.append([Paragraph(f"<b>Identificatie /<br/>Identification</b>", smaller_font_style),
+                                       Paragraph(f"{source}", smaller_font_style)])
                 
                 # UN Number & description
                 UN_number = sources[source]['UNnumber']
-                description = sources[source]['ADRDescription']
-                ADR_table_data.append([Paragraph(f"<b>Beschrijving/ <br/>Description</b>"),
-                                       Paragraph(f"{UN_number} {description}")])
+                package = sources[source]['Package']
+                ADR_table_data.append([Paragraph(f"<b>Beschrijving /<br/>Description</b>", smaller_font_style),
+                                       Paragraph(f"{UN_number} RADIOACTIEVE STOFFEN, IN COLLI VAN TYPE {package}, 7, (E) /<br/>{UN_number} MATIÈRES RADIOACTIVES EN COLIS DE TYPE {package}, 7, (E)", smaller_font_style)])
                 
                 # Isotope
                 isotope = sources[source]['Isotope']
-                ADR_table_data.append([Paragraph(f"<b>Isotoop/ <br/>Isotope</b>"),
-                                       Paragraph(f"{isotope}")])
+                ADR_table_data.append([Paragraph(f"<b>Isotoop /<br/>Isotope</b>", smaller_font_style),
+                                       Paragraph(f"{isotope}", smaller_font_style)])
                 
                 # Activity
                 A0 = sources[source]['GBq']
                 A0_date = utils.iso_to_datetime(sources[source]['Calibrationdate'])
 
-                activity = compute_activity(A0, A0_date, isotope, datetime_start)
-                ADR_table_data.append([Paragraph(f"<b>Activiteit/ <br/>Activité</b>"),
-                                       Paragraph(f"{activity} [GBq] op / le {datetime_start.strftime('%d/%m/%Y')}")])
+                GBq, Ci = compute_activity(A0, A0_date, isotope, datetime_start)
+                ADR_table_data.append([Paragraph(f"<b>Activiteit /<br/>Activité</b>", smaller_font_style),
+                                       Paragraph(f"{GBq} [GBq] - {Ci} [Ci] op/le {datetime_start.strftime('%d/%m/%Y')}", smaller_font_style)])
                 
                 # Package category
                 pckg_category = sources[source]['Label']
-                ADR_table_data.append([Paragraph(f"<b>Label/ <br/>Étiquette</b>"),
-                                       Paragraph(f"{pckg_category}")])
+                ADR_table_data.append([Paragraph(f"<b>Label /<br/>Étiquette</b>", smaller_font_style),
+                                       Paragraph(f"{pckg_category}", smaller_font_style)])
                 
                 # Transport index
                 transport_index = sources[source]['Transportindex']
-                ADR_table_data.append([Paragraph(f"<b>Transportindex/ <br/>Indice de transport</b>"),
-                                       Paragraph(f"{transport_index}")])
+                ADR_table_data.append([Paragraph(f"<b>Transportindex /<br/>Indice de transport</b>", smaller_font_style),
+                                       Paragraph(f"{transport_index}", smaller_font_style)])
                 
                 # Physical state
                 physical_state = sources[source]['Physicalstate']
-                ADR_table_data.append([Paragraph(f"<b>Fysiche toestand/ <br/>État physique</b>"),
-                                       Paragraph(f"{physical_state}")])
+                ADR_table_data.append([Paragraph(f"<b>Fysiche toestand /<br/>État physique</b>", smaller_font_style),
+                                       Paragraph(f"{physical_state}", smaller_font_style)])
                 
                 # Certificate
                 certificate = sources[source]['Certificate']
-                ADR_table_data.append([Paragraph(f"<b>Goedkeuringscertificaat/ <br/>Certificat d'approbation</b>"),
-                                       Paragraph(f"{certificate}")])
+                ADR_table_data.append([Paragraph(f"<b>Goedkeuringscertificaat /<br/>Certificat d'approbation</b>", smaller_font_style),
+                                       Paragraph(f"{certificate}", smaller_font_style)])
                 
                 # Certificate (Special Form)
                 certificate_sf = sources[source]['Certificate_x0028_specialform_x0']
-                ADR_table_data.append([Paragraph(f"<b>Goedkeuringscertificaat - Special Form/ <br/>Certificat d'approbation - Forme spéciale</b>"),
-                                       Paragraph(f"{certificate_sf}")])
+                if certificate_sf is not None:
+                    ADR_table_data.append([Paragraph(f"<b>Goedkeuringscertificaat - Special Form /<br/>Certificat d'approbation - Forme spéciale</b>", smaller_font_style),
+                                       Paragraph(f"{certificate_sf}", smaller_font_style)])
+                    
+                # TODO: Replace dict accesses by .get() to avoid errors when none
+
+                # Focus
+                focus = sources.get(source).get('focus')
+                if focus is not None:
+                    ADR_table_data.append([Paragraph("<b>Focus /<br/>Foyer</b>", smaller_font_style),
+                                       Paragraph(f"{focus}")])
 
                 # Create the table with the data
-                ADR_table = Table(ADR_table_data, colWidths=[130, None])
+                ADR_table = Table(ADR_table_data, colWidths=[120, None])
 
                 # Define a TableStyle
                 styleADR = TableStyle([
                     ('TEXTCOLOR', (0,0), (-1,0), colors.black),
                     ('ALIGN', (0,0), (-1,-1), 'LEFT'),
-                    ('VALIGN', (0,0), (-1,-1), 'TOP'),
-                    ('BOTTOMPADDING', (0,0), (-1,-1), 5),
-                    ('TOPPADDING', (0,0), (-1,-1), 5),
-                    ('GRID', (0,0), (-1,-1), 1, colors.black),
+                    ('VALIGN', (0,0), (-1,-1), 'CENTER'),
+                    ('BOTTOMPADDING', (0,0), (-1,-1), 4.9),
+                    ('TOPPADDING', (0,0), (-1,-1), 4.9),
+                    ('GRID', (0,0), (-1,-1), 1, colors.darkslategray),
                 ])
 
                 # Apply the style to the table
@@ -243,8 +272,31 @@ def generate_pdfs(missions, sources):
                 # Add table to list of flowables
                 elements.append(ADR_table)
 
-                elements.append(Spacer(1, 10))
-        
+                elements.append(Spacer(1, 20))
+
+            elements.append(Paragraph("Signatures", styles['Heading4']))
+            elements.append(Spacer(1, 20))
+            signatures_table_data = []
+            signatures_table_data.append(["Verzender / Expéditeur",
+                                          "Vervoerder / Transporteur",
+                                          "Bestemmeling / Destinataire"])
+            signatures_table = Table(signatures_table_data, colWidths=150) 
+            # Define a TableStyle
+            style_sign = TableStyle([
+                ('TEXTCOLOR', (0,0), (-1,0), colors.black),
+                ('ALIGN', (0,0), (0,-1), 'LEFT'),
+                ('ALIGN', (1,0), (1,-1), 'CENTER'),
+                ('ALIGN', (2,0), (2,-1), 'RIGHT'),
+                ('BOTTOMPADDING', (0,0), (-1,-1), 0),
+                ('TOPPADDING', (0,0), (-1,-1), 0),
+                ('GRID', (0,0), (-1,-1), 1, colors.transparent),
+            ])
+
+            # Apply the style to the table
+            signatures_table.setStyle(style_sign)
+
+            # Add table to list of flowables
+            elements.append(signatures_table)
 
         # Build the PDF document
         doc.build(elements, onFirstPage=add_header_footer, onLaterPages=add_header_footer)
@@ -258,11 +310,12 @@ def compute_activity(A0:float, A0_date:datetime, isotope:str, date:datetime):
                  'Se-75': 119.78}
     timedelta = date.date()-A0_date.date()
     days_diff_float = utils.timedelta_to_days_float(timedelta)
-    A = round(A0*((1/2)**(days_diff_float/half_life[isotope])), 2)
-    return A
+    GBq = round(A0*((1/2)**(days_diff_float/half_life[isotope])), 2)
+    Ci = round((GBq / 37), 2)
+    return GBq, Ci
 
 def add_header_footer(canvas, doc):
-    # This function will draw the header/footer on each page
+    # This function will draw the header/footer on each page 
     canvas.saveState()
 
     # Footer
