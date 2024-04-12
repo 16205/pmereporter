@@ -1,5 +1,6 @@
 import json
 import sys
+import utils
 from tqdm import tqdm
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
@@ -142,7 +143,6 @@ def generate_pdfs(missions, sources):
             ('TEXTCOLOR', (0,0), (-1,0), colors.black),
             ('ALIGN', (0,0), (-1,-1), 'LEFT'),
             ('VALIGN', (0,0), (-1,-1), 'TOP'),
-            ('FONTNAME', (0,0), (-1,0), 'Helvetica'),
             ('BOTTOMPADDING', (0,0), (-1,-1), 5),
             ('TOPPADDING', (0,0), (-1,-1), 5),
             ('GRID', (0,0), (-1,-1), 1, colors.black),
@@ -157,10 +157,10 @@ def generate_pdfs(missions, sources):
         # ADR Information Heading -------------------------------------
         if mission['fields']['SOURCES'] is not None or mission['fields']['SOURCESII'] is not None or mission['fields']['SOURCESIII'] is not None:
             elements.append(PageBreak())
-            elements.append(Paragraph("<b>ADR Informatie<br/><i>Information ADR</i></b>", styles['Heading2']))
+            elements.append(Paragraph("<b>ADR Informatie / Information ADR</b>", styles['Heading2']))
 
             # Description
-            elements.append(Paragraph("<b>Marchandises ADR transportées:<br/>Getransporteerde ADR stoffen:</b>", styles['Heading3']))
+            elements.append(Paragraph("<b>Getransporteerde ADR stoffen: / Marchandises ADR transportées:</b>", styles['Heading3']))
             
             # Set variables containing sources identification
             mission_sources = []
@@ -177,61 +177,68 @@ def generate_pdfs(missions, sources):
                 ADR_table_data = []
 
                 # Source internal identification (Vincotte)
-                ADR_table_data.append([Paragraph(f"<b>Identification:</b>"),
+                ADR_table_data.append([Paragraph(f"<b>Identificatie/ <br/>Identification</b>"),
                                        Paragraph(f"{source}")])
                 
                 # UN Number & description
                 UN_number = sources[source]['UNnumber']
                 description = sources[source]['ADRDescription']
-                ADR_table_data.append([Paragraph(f"<b>UN Number & description:</b>"),
+                ADR_table_data.append([Paragraph(f"<b>Beschrijving/ <br/>Description</b>"),
                                        Paragraph(f"{UN_number} {description}")])
                 
                 # Isotope
                 isotope = sources[source]['Isotope']
-                ADR_table_data.append([Paragraph(f"<b>Isotope:</b>"),
+                ADR_table_data.append([Paragraph(f"<b>Isotoop/ <br/>Isotope</b>"),
                                        Paragraph(f"{isotope}")])
                 
-                # Max activity
-                max_activity = sources[source]['GBq']
-                ADR_table_data.append([Paragraph(f"<b>Max activity (A0) [GBq]:</b>"),
-                                       Paragraph(f"{max_activity}")])
+                # Activity
+                A0 = sources[source]['GBq']
+                A0_date = utils.iso_to_datetime(sources[source]['Calibrationdate'])
+
+                activity = compute_activity(A0, A0_date, isotope, datetime_start)
+                ADR_table_data.append([Paragraph(f"<b>Activiteit/ <br/>Activité</b>"),
+                                       Paragraph(f"{activity} [GBq] op / le {datetime_start.strftime('%d/%m/%Y')}")])
                 
                 # Package category
                 pckg_category = sources[source]['Label']
-                ADR_table_data.append([Paragraph(f"<b>Package category label:</b>"),
+                ADR_table_data.append([Paragraph(f"<b>Label/ <br/>Étiquette</b>"),
                                        Paragraph(f"{pckg_category}")])
                 
                 # Transport index
                 transport_index = sources[source]['Transportindex']
-                ADR_table_data.append([Paragraph(f"<b>Transport index:</b>"),
+                ADR_table_data.append([Paragraph(f"<b>Transportindex/ <br/>Indice de transport</b>"),
                                        Paragraph(f"{transport_index}")])
                 
                 # Physical state
                 physical_state = sources[source]['Physicalstate']
-                ADR_table_data.append([Paragraph(f"<b>Physical state:</b>"),
+                ADR_table_data.append([Paragraph(f"<b>Fysiche toestand/ <br/>État physique</b>"),
                                        Paragraph(f"{physical_state}")])
                 
                 # Certificate
                 certificate = sources[source]['Certificate']
-                ADR_table_data.append([Paragraph(f"<b>Certificate:</b>"),
+                ADR_table_data.append([Paragraph(f"<b>Goedkeuringscertificaat/ <br/>Certificat d'approbation</b>"),
                                        Paragraph(f"{certificate}")])
+                
+                # Certificate (Special Form)
+                certificate_sf = sources[source]['Certificate_x0028_specialform_x0']
+                ADR_table_data.append([Paragraph(f"<b>Goedkeuringscertificaat - Special Form/ <br/>Certificat d'approbation - Forme spéciale</b>"),
+                                       Paragraph(f"{certificate_sf}")])
 
                 # Create the table with the data
-                ADR_table = Table(ADR_table_data, colWidths=[111, None])
+                ADR_table = Table(ADR_table_data, colWidths=[130, None])
 
                 # Define a TableStyle
-                style = TableStyle([
+                styleADR = TableStyle([
                     ('TEXTCOLOR', (0,0), (-1,0), colors.black),
                     ('ALIGN', (0,0), (-1,-1), 'LEFT'),
                     ('VALIGN', (0,0), (-1,-1), 'TOP'),
-                    ('FONTNAME', (0,0), (-1,0), 'Helvetica'),
                     ('BOTTOMPADDING', (0,0), (-1,-1), 5),
                     ('TOPPADDING', (0,0), (-1,-1), 5),
                     ('GRID', (0,0), (-1,-1), 1, colors.black),
                 ])
 
                 # Apply the style to the table
-                ADR_table.setStyle(style)
+                ADR_table.setStyle(styleADR)
 
                 # Add table to list of flowables
                 elements.append(ADR_table)
@@ -244,6 +251,15 @@ def generate_pdfs(missions, sources):
 
     print("Pdfs generated!")
     return
+
+def compute_activity(A0:float, A0_date:datetime, isotope:str, date:datetime):
+    half_life = {'Cs-137': 11012.05,
+                 'Ir-192': 73.83,
+                 'Se-75': 119.78}
+    timedelta = date.date()-A0_date.date()
+    days_diff_float = utils.timedelta_to_days_float(timedelta)
+    A = round(A0*((1/2)**(days_diff_float/half_life[isotope])), 2)
+    return A
 
 def add_header_footer(canvas, doc):
     # This function will draw the header/footer on each page
