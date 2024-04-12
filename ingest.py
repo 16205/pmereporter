@@ -50,7 +50,7 @@ def get_events(dateFrom:datetime, dateTo:datetime=None, departments:list=None, r
         return response.json()
     
     elif response.status_code == 401:
-        sys.exit(f"Please authenticate to PlanningPME API before requesting for data. {response.status_code} Unauthorized.")
+        sys.exit(f"Please (re)authenticate to PlanningPME API before requesting for data. {response.status_code} Unauthorized.")
     else:
         sys.exit(f"Failed to retrieve data: {response.status_code}")
 
@@ -81,7 +81,7 @@ def get_locations(missions):
             mission["location"] = address
 
         elif response.status_code == 401:
-            sys.exit(f"Please authenticate to PlanningPME API before requesting for data. {response.status_code} Unauthorized.")
+            sys.exit(f"Please (re)authenticate to PlanningPME API before requesting for data. {response.status_code} Unauthorized.")
         else:
             sys.exit(f"Failed to retrieve data: {response.status_code}")
 
