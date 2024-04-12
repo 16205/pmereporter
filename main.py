@@ -34,8 +34,8 @@ def fetch_and_store(date:datetime=None):
 def generate(date:datetime=None):
     with open('temp/missions.json', 'r') as file1, \
          open('temp/sources.json', 'r') as file2:
-        missions = file1.read()
-        sources = file2.read()
+        missions = json.load(file1)
+        sources = json.load(file2)
 
     # Feed results into process.generate_pdfs()     (Internal      )
     process.generate_pdfs(missions, sources)
@@ -50,3 +50,4 @@ def check_mat_double_booking():
 
 # fetch_and_store()
 generate()
+# print(process.compute_activity(1219, datetime(2024,2,21), 'Ir-192', datetime.today()))
