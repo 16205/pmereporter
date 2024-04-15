@@ -110,8 +110,9 @@ def generate_pdfs(missions, sources):
             sys.exit('Mission intervention location missing, please first run ingest.get_locations()!')
 
         # Departure location
-        if mission['fields']['DEPARTUREPLACE'] is not None:
-            mission_table_data.append([Paragraph("<b>Departure location</b>"), Paragraph(f"{mission['fields']['DEPARTUREPLACE']}")])
+        departureplace = mission.get('fields').get('DEPARTUREPLACE')
+        if departureplace is not None:
+            mission_table_data.append([Paragraph("<b>Departure location</b>"), Paragraph(f"{departureplace}")])
 
         # Info/comments
         comments1 = ""
@@ -158,7 +159,10 @@ def generate_pdfs(missions, sources):
 
         # ADR Information -------------------------------------
         # Check if RT mission
-        if mission['fields']['SOURCES'] is not None or mission['fields']['SOURCESII'] is not None or mission['fields']['SOURCESIII'] is not None:
+        s1 = mission['fields']['SOURCES']
+        s2 = mission['fields']['SOURCESII']
+        s3 = mission['fields']['SOURCESIII']
+        if (s1 is not None or s2 is not None or s3 is not None) and (s1 != "" or s2 != "" or s3 != ""):
             elements.append(PageBreak())
             elements.append(Paragraph("<b>ADR Informatie / Information ADR</b>", styles['Heading2']))
 
@@ -168,7 +172,9 @@ def generate_pdfs(missions, sources):
                                    Paragraph("<b>Bestemmeling / Destinataire</b>")])
             addresses = {'Villers-Le-Bouillet': 'Rue de la métallurgie 47<br/>4530 Villers-Le-Bouillet',
                          'Houdeng': 'Chaussée Paul Houtart 88<br/>7100 Houdeng-Goegnies'}
-            s_r_table_data.append([Paragraph(f"Vinçotte NV<br/><br/>{addresses.get(mission['fields']['DEPARTUREPLACE'])}"),
+            if 'Houdeng' in departureplace:
+                departureplace = 'Houdeng'
+            s_r_table_data.append([Paragraph(f"Vinçotte NV<br/><br/>{addresses.get(departureplace)}"),
                                    Paragraph(f"{client_name}<br/>{mission['location']}")])
             s_r_table = Table(s_r_table_data)
             s_r_table.setStyle(style)
@@ -187,11 +193,11 @@ def generate_pdfs(missions, sources):
             if mission['fields']['SOURCESIII'] != "" and not None:
                 mission_sources.append(mission['fields']['SOURCESIII'])
             
-            i=1
+            i=0
             for source in mission_sources:
                 if len(mission_sources)>1:
-                    elements.append(Paragraph(f"<b>Isotope {i}</b>", styles['Heading4']))
                     i+=1
+                    elements.append(Paragraph(f"<b>Isotope {i}</b>", styles['Heading4']))
 
                 # Table data
                 ADR_table_data = []
@@ -216,8 +222,8 @@ def generate_pdfs(missions, sources):
                 A0_date = utils.iso_to_datetime(sources[source]['Calibrationdate'])
 
                 GBq, Ci = compute_activity(A0, A0_date, isotope, datetime_start)
-                ADR_table_data.append([Paragraph(f"<b>Activiteit /<br/>Activité</b>", smaller_font_style),
-                                       Paragraph(f"{GBq} [GBq] - {Ci} [Ci] op/le {datetime_start.strftime('%d/%m/%Y')}", smaller_font_style)])
+                ADR_table_data.append([Paragraph(f"<b>Activiteit op {datetime_start.strftime('%d/%m/%Y')} /<br/>Activité le {datetime_start.strftime('%d/%m/%Y')}</b>", smaller_font_style),
+                                       Paragraph(f"{GBq} GBq - {Ci} Ci", smaller_font_style)])
                 
                 # Package category
                 pckg_category = sources[source]['Label']
@@ -248,10 +254,10 @@ def generate_pdfs(missions, sources):
                 # TODO: Replace dict accesses by .get() to avoid errors when none
 
                 # Focus
-                focus = sources.get(source).get('focus')
+                focus = sources.get(source).get('Focus')
                 if focus is not None:
                     ADR_table_data.append([Paragraph("<b>Focus /<br/>Foyer</b>", smaller_font_style),
-                                       Paragraph(f"{focus}")])
+                                       Paragraph(f"{focus} mm", smaller_font_style)])
 
                 # Create the table with the data
                 ADR_table = Table(ADR_table_data, colWidths=[120, None])
@@ -273,6 +279,9 @@ def generate_pdfs(missions, sources):
                 elements.append(ADR_table)
 
                 elements.append(Spacer(1, 20))
+
+                if len(mission_sources)>1 and i < len(mission_sources):
+                    elements.append(PageBreak())
 
             elements.append(Paragraph("Signatures", styles['Heading4']))
             elements.append(Spacer(1, 20))
