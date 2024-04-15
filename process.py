@@ -10,16 +10,38 @@ from reportlab.lib.enums import TA_JUSTIFY
 from datetime import datetime
 
 def get_resources_from_departments(departments):
+    """
+    Extracts and returns the keys of resources from the given departments.
+
+    This function assumes that the input 'departments' is a response object from a request (e.g., from requests library)
+    which contains a JSON body with a list of resources. It parses this JSON to extract the 'key' of each resource
+    within the 'resources' list.
+
+    Parameters:
+    - departments: A response object that can be converted to JSON, expected to contain a 'resources' list.
+
+    Returns:
+    - A list of strings, where each string is the 'key' of a resource found in the input 'departments'.
+    """
+
     departments = departments.json()
 
     keys = [resource['key'] for resource in departments['resources']]
 
     return keys
 
-def add_locations():
-    pass
+def generate_pdfs(missions:dict, sources:dict):
+    """
+    Generates PDF documents for each mission in the provided missions list, including ADR information and other mission details.
 
-def generate_pdfs(missions, sources):
+    Parameters:
+    - missions (dict): A dictionary containing mission items, each with details such as start/end times, resources, customers, and ADR source information.
+    - sources (dict): A dictionary containing source items with details such as UN number, package, isotope, activity, and other ADR relevant information.
+
+    The function iterates over each mission, compiles relevant information into a structured format, and generates a PDF document for that mission.
+    The generated PDF includes mission details, agent and client information, ADR information for sources involved in the mission, and signature fields.
+    """
+
     print("Generating pdfs...")
 
     # Define styles
@@ -314,6 +336,25 @@ def generate_pdfs(missions, sources):
     return
 
 def compute_activity(A0:float, A0_date:datetime, isotope:str, date:datetime):
+    """
+    Computes the radioactive activity of an isotope at a given date based on its initial activity and half-life.
+
+    The function calculates the remaining activity of a radioactive isotope on a specific date, given its initial activity,
+    the date of the initial activity measurement, the isotope type, and the target date for which the activity is to be calculated.
+    The calculation is based on the formula A = A0 * (1/2)^(Δt/T), where A0 is the initial activity, Δt is the time difference
+    in days between the initial and target dates, and T is the half-life of the isotope in days.
+
+    Parameters:
+    - A0 (float): The initial activity of the isotope in GBq.
+    - A0_date (datetime): The date of the initial activity measurement.
+    - isotope (str): The type of the isotope, used to determine its half-life.
+    - date (datetime): The target date for which the activity is to be calculated.
+
+    Returns:
+    - tuple: A tuple containing two float values:
+        - The first float is the calculated activity in GBq on the target date.
+        - The second float is the calculated activity in Ci on the target date.
+    """
     half_life = {'Cs-137': 11012.05,
                  'Ir-192': 73.83,
                  'Se-75': 119.78}
@@ -324,7 +365,20 @@ def compute_activity(A0:float, A0_date:datetime, isotope:str, date:datetime):
     return GBq, Ci
 
 def add_header_footer(canvas, doc):
-    # This function will draw the header/footer on each page 
+    """
+    Draws the header and footer on each page of a PDF document.
+
+    This function is designed to be used as a callback by the ReportLab library during the PDF generation process.
+    It adds a consistent header and footer to each page, enhancing the document's presentation and providing essential
+    information like page numbers. The function also includes the company's logos in the header for branding purposes.
+
+    Parameters:
+    - canvas: The canvas represents the current page in the PDF document. It is used to draw the header and footer elements.
+    - doc: The document object that is being generated. It provides context, such as the current page number.
+
+    Returns:
+    - None: This function directly modifies the canvas and does not return any value.
+    """
     canvas.saveState()
 
     # Footer
@@ -335,17 +389,9 @@ def add_header_footer(canvas, doc):
     # Logo image to include
     logo1_path = "media\Vincotte_RGB_H.png"
     logo2_path = "media\Member-Group-Kiwa-FC.jpg"
-    canvas.drawImage(logo1_path, 75, 759, width=52, height=52)
-    canvas.drawImage(logo2_path, 135, 760, width=62.28, height=30)
+    canvas.drawImage(logo1_path, 75, 759, width=52, height=52)  # Draw the first logo
+    canvas.drawImage(logo2_path, 135, 760, width=62.28, height=30)  # Draw the second logo
     
     # Optionally add more elements here (e.g., footer text)
     
     canvas.restoreState()
-
-def center_text(canvas, text, y, page_width, font_name, font_size):
-    canvas.setFont(font_name, font_size)
-    text_width = canvas.stringWidth(text, font_name, font_size)
-    # Calculate X coordinate for centering the text
-    x = (page_width - text_width) / 2
-    
-    canvas.drawString(x, y, text)
