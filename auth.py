@@ -14,6 +14,20 @@ load_dotenv(override=True)
 connection_str = os.environ['HOST'] + 'token'
 
 def authenticate_to_ppme():
+    """
+    Authenticates to the PPME api service using the APPKEY and AUTH_TOKEN environment variables.
+    Upon successful authentication, updates the environment variable for the bearer token
+    using the utility function `update_token_env`.
+
+    The function sends a PUT request to the PPME service with the necessary authentication
+    details and handles the response. If the authentication is successful, it updates the
+    bearer token in the environment. If the authentication fails, it logs the failure.
+
+    Returns:
+        None. The function directly updates the environment variable for the bearer token
+        upon successful authentication or logs an error message upon failure.
+    """
+    
     headers = {
         'X-APPKEY': os.environ['APPKEY']
     }
@@ -36,6 +50,17 @@ def authenticate_to_ppme():
         print("Failed to authenticate:", response.status_code)
 
 def authenticate_to_shpt():
+    """
+    Authenticates to a SharePoint site using the client credentials flow.
+
+    This function retrieves the SharePoint site URL, client ID, and client secret from
+    environment variables. It then creates a client credential object and uses it to
+    authenticate to the SharePoint site. The authenticated client context is returned,
+    allowing for further operations on the SharePoint site.
+
+    Returns:
+        ClientContext: An authenticated SharePoint client context object.
+    """
     site_url = os.environ['SHP_SITE_URL']
     client_id = os.environ['SHP_CLIENT_ID']
     client_secret = os.environ['SHP_CLIENT_SECRET']
@@ -46,12 +71,27 @@ def authenticate_to_shpt():
     return ctx
 
 def authenticate_to_mail():
-    # OAuth2 credentials and configuration
+    """
+    Authenticates to an Exchange mailbox using OAuth2 credentials.
+
+    This function sets up OAuth2 credentials with the necessary client ID, client secret,
+    tenant ID, and the primary SMTP address of the mailbox. It then creates a configuration
+    object for connecting to the Exchange server and initializes an Account object with
+    impersonation access type to interact with the mailbox.
+
+    The environment variables 'SHP_CLIENT_ID', 'SHP_CLIENT_SECRET', 'TENANT_ID', and
+    'ACCOUNT_EMAIL' are used to retrieve the necessary authentication details.
+
+    Returns:
+        Account: An authenticated exchangelib Account object for the specified mailbox.
+    """
+    # Retrieve authentication details from environment variables
     client_id = os.environ['SHP_CLIENT_ID']
     client_secret = os.environ['SHP_CLIENT_SECRET']
     tenant_id = os.environ['TENANT_ID']
-    account_email = 'planNDTsud@vincotte.be'
+    account_email = os.environ['ACCOUNT_EMAIL']
 
+    # Setup OAuth2 credentials with the retrieved details
     credentials = OAuth2Credentials(
         client_id=client_id,
         client_secret=client_secret,
@@ -59,9 +99,9 @@ def authenticate_to_mail():
         identity=Identity(primary_smtp_address=account_email)
     )
 
+    # Create a configuration object for the Exchange server
     config = Configuration(server='outlook.office365.com', credentials=credentials)
+    # Initialize and return an Account object for interacting with the mailbox
     account = Account(primary_smtp_address=account_email, config=config, autodiscover=False, access_type='impersonation')
 
-    # Now you can use the account object to send emails, access mailbox items, etc.
-
-    pass
+    return account
