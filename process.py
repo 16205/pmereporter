@@ -4,7 +4,7 @@ import utils
 from tqdm import tqdm
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Frame, Spacer, PageBreak
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Spacer, PageBreak, LayoutError
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_JUSTIFY
 from datetime import datetime
@@ -133,32 +133,47 @@ def generate_pdfs(missions:dict, sources:dict):
 
         # Departure location
         departureplace = mission.get('fields').get('DEPARTUREPLACE')
-        if departureplace is not None:
+        if departureplace is not None and departureplace!= '':
             mission_table_data.append([Paragraph("<b>Departure location</b>"), Paragraph(f"{departureplace}")])
 
         # Info/comments
-        comments1 = ""
-        comments2 = ""
-        comments3 = ""
-        comments4 = ""
-        if mission['fields']['COMMENTS_LOCATION'] is not None:
-            comments1 = mission['fields']['COMMENTS_LOCATION']
-        if mission['remark'] is not None:
-            comments2 = mission['remark']
-        if 'TASKCOMMENTS' in mission['fields']:
-            if mission['fields']['TASKCOMMENTS'] is not None:
-                comments3 = mission['fields']['TASKCOMMENTS']
-        for index, item in enumerate(mission['customers']):
-            if 'COMMENTSCUSTOMER' in mission['customers'][index]['fields']:
-                if mission['customers'][index]['fields']['COMMENTSCUSTOMER'] is not None:
-                    comments4 = mission['customers'][index]['fields']['COMMENTSCUSTOMER']
+        comments1 = mission.get('fields').get('COMMENTS_LOCATION')
+        comments2 = mission.get('remark')
+        comments3 = mission.get('fields').get('TASKCOMMENTS')
+        comments4 = mission.get('customers')[0].get('fields').get('COMMENTSCUSTOMER')
         
+        # Group comments in list
         comments = [comments1, comments2, comments3, comments4]
+
+        # Format text for pretty display
+        for i in range(len(comments)):
+            if comments[i] is not None:
+                comments[i] = utils.format_text(comments[i])
+                
+        # Add separator between different types of comments
         separator = "<br/>----------------------------------------------------------------------------------------------<br/>"
-        comments_paragraph = separator.join([comment for comment in comments if comment])
-        
-        mission_table_data.append([Paragraph("<b>Remarks/comments</b>"), 
-                                   Paragraph(comments_paragraph, styles['Justify'])])        
+        comments_text = separator.join([comment for comment in comments if comment])
+
+        comments_paragraph = []
+        max_height = 500
+        max_width = 320
+        actual_height = utils.calculate_paragraph_height(comments_text, max_width, styles['Normal'])
+
+        if actual_height > max_height:
+            # Split total comments text into two paragraphs if height > max height
+            comments_paragraph = utils.ajust_paragraph_height(comments_text, max_height, max_width, styles['Normal'])
+        else:
+            comments_paragraph.append(comments_text)
+
+        # Print one paragraph per table row
+        for comment in comments_paragraph:
+            if comment is not None and comment != '':
+                mission_table_data.append([Paragraph("<b>Remarks/comments</b>"), 
+                                           Paragraph(comment)])
+                
+        # # Old
+        # mission_table_data.append([Paragraph("<b>Remarks/comments</b>"), 
+        #                            Paragraph(comments_paragraph, styles['Justify'])])   
 
         # Create the table with the data
         mission_table = Table(mission_table_data, colWidths=[111, None])
@@ -330,8 +345,11 @@ def generate_pdfs(missions:dict, sources:dict):
             elements.append(signatures_table)
 
         # Build the PDF document
-        doc.build(elements, onFirstPage=add_header_footer, onLaterPages=add_header_footer)
-
+        try:
+            doc.build(elements, onFirstPage=add_header_footer, onLaterPages=add_header_footer)
+        except PermissionError as e:
+            sys.exit(f"Please close the document \"{e.filename}\" and try again.")
+            
     print("Pdfs generated!")
     return
 
