@@ -83,7 +83,7 @@ def authenticate_to_mail():
     'ACCOUNT_EMAIL' are used to retrieve the necessary authentication details.
 
     Returns:
-        Account: An authenticated exchangelib Account object for the specified mailbox.
+        account: An authenticated exchangelib Account object for the specified mailbox.
     """
     # Retrieve authentication details from environment variables
     client_id = os.environ['SHP_CLIENT_ID']
