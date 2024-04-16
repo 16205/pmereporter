@@ -3,6 +3,7 @@ import ingest
 import auth
 import process
 import json
+import utils
 
 # auth.authenticate_to_ppme()
 
@@ -30,7 +31,8 @@ def fetch_and_store(date:datetime=None):
 
     # Call ingest.get_locations() to enrich missions with location data        (PPME       in )
     missions = ingest.get_locations(missions)
-    missions = ingest.get_locations(missions)
+
+    utils.save_to_txt(missions)
 
     # Write enriched missions data to a JSON file
     with open('temp/missions.json', 'w') as file:
@@ -75,4 +77,3 @@ def check_mat_double_booking():
 
 fetch_and_store()
 generate()
-# print(process.compute_activity(1219, datetime(2024,2,21), 'Ir-192', datetime.today()))
