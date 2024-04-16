@@ -96,8 +96,10 @@ def get_sources():
 
     sources_list = sp_list.get_items()
     ctx.load(sources_list)
-    ctx.execute_query()
-
+    try:
+        ctx.execute_query()
+    except(ValueError):
+        sys.exit(f"Failed to retrieve data. Try again after enabling Cato VPN")
     sources = {}
 
     for source in sources_list:
