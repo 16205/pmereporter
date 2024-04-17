@@ -437,3 +437,38 @@ def add_header_footer(canvas, doc):
     # Optionally add more elements here (e.g., footer text)
     
     canvas.restoreState()
+
+def check_conflicts(missions:dict):
+    """
+    Checks for double bookings of sources. Looks for the presence of the same source in two different missions, 
+    based on missions.json"""
+
+    booked_sources = {}
+
+    # Iterate over all missions
+    for mission in missions['items']:
+        sources = []
+        sources.append(mission.get('fields').get('SOURCES'))
+        sources.append(mission.get('fields').get('SOURCESII'))
+        sources.append(mission.get('fields').get('SOURCESIII'))
+        sources.append(mission.get('fields').get('SOURCESIV'))
+        
+        # Store any not None sources in booked_sources
+        if any(sources):
+            for s in sources:
+                if s is None or s == '':
+                    sources.remove(s)
+                    break
+                if s in booked_sources:
+                    booked_sources[s].append(mission.get('key'))
+                else:
+                    booked_sources[s] = [mission.get('key')]
+    
+    # Check for double bookings in booked_sources
+    if any(booked_sources):
+        for source in booked_sources:
+            if len(source) == 1:
+                # Delete source from booked_sources
+                del source
+
+        return booked_sources
