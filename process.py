@@ -170,12 +170,8 @@ def generate_pdfs(missions:dict, sources:dict):
             if comment is not None and comment != '':
                 mission_table_data.append([Paragraph("<b>Remarks/comments</b>"), 
                                            Paragraph(comment)])
-                
-        # # Old
-        # mission_table_data.append([Paragraph("<b>Remarks/comments</b>"), 
-        #                            Paragraph(comments_paragraph, styles['Justify'])])   
 
-        # Create the table with the data
+        # Create the table with the mission data
         mission_table = Table(mission_table_data, colWidths=[111, None])
 
         # Define a TableStyle
@@ -193,6 +189,32 @@ def generate_pdfs(missions:dict, sources:dict):
 
         # Add table to list of flowables
         elements.append(mission_table)
+
+        # Norms & criteria
+        norm_crit_list = [mission.get('fields').get('NORMCR1'),
+                          mission.get('fields').get('NORMCR2'),
+                          mission.get('fields').get('NORMCR3'),
+                          mission.get('fields').get('NORMCR4'),
+                          mission.get('fields').get('NORMCR5'),
+                          mission.get('fields').get('NORMCR6'),
+                          mission.get('fields').get('NORMCR7')]
+        
+        # Check if any norms or criteria are present, that is not None
+        if any(norm_crit_list):        
+            elements.append(Paragraph("Norms & criteria", styles['Heading3']))
+
+            norm_crit_table_data = []
+
+            j = 1
+            for norm_crit in norm_crit_list:
+                if norm_crit is not None and norm_crit != '':
+                    norm_crit_table_data.append([Paragraph(f"<b>Norm/Criteria {j}</b>"), Paragraph(norm_crit)])
+                    j += 1
+
+            norm_crit_table = Table(norm_crit_table_data, colWidths=[111, None])
+            norm_crit_table.setStyle(style)
+
+            elements.append(norm_crit_table)
 
         # ADR Information -------------------------------------
         # Check if RT mission
@@ -229,6 +251,8 @@ def generate_pdfs(missions:dict, sources:dict):
                 mission_sources.append(mission['fields']['SOURCESII'])
             if mission['fields']['SOURCESIII'] != "" and not None:
                 mission_sources.append(mission['fields']['SOURCESIII'])
+            if mission['fields']['SOURCESIV'] != "" and not None:
+                mission_sources.append(mission['fields']['SOURCESIV'])
             
             i=0
             for source in mission_sources:
