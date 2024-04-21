@@ -1,13 +1,15 @@
-import json
+from datetime import datetime
+from tqdm import tqdm
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_JUSTIFY
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Spacer, PageBreak
+import auth
+import os
+import outbound
 import sys
 import utils
-from tqdm import tqdm
-from reportlab.lib.pagesizes import A4
-from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Spacer, PageBreak, LayoutError
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.enums import TA_JUSTIFY
-from datetime import datetime
 
 def get_resources_from_departments(departments):
     """
@@ -59,7 +61,7 @@ def generate_pdfs(missions:dict, sources:dict):
         for resource in mission["resources"]:
             if not resource['label'].startswith("RG -") and not resource['label'].startswith("BUNKER ") and not resource['label'].startswith("Vincotte") and not resource['label'].startswith("LABO "):
                 resources[resource['key']] = {'name': resource['label'], 'phone1': resource['mobile'], 'phone2': resource['phone']}
-
+        
         # Create a PDF document
         doc = SimpleDocTemplate(f".\generated\{mission['key']}.pdf", pagesize=A4, topMargin=100)
 
@@ -437,7 +439,7 @@ def add_header_footer(canvas, doc):
     
     canvas.restoreState()
 
-def check_conflicts(missions:dict):
+def check_sources_double_bookings(missions:dict):
     booked_sources = {}
 
     # Iterate over all missions
@@ -466,3 +468,16 @@ def check_conflicts(missions:dict):
             double_bookings[source] = booked_sources[source]
 
     return double_bookings
+
+def send_om():
+    access_token = os.environ.get('MS_ACCESS_TOKEN')
+
+    try: 
+        outbound.send_email(access_token, "Test", 'glohest@vincotte.be', "Mission order attached \n", "./generated/2590476.pdf" )
+    except ValueError:
+        try:
+            access_token = auth.refresh_access_token()
+            outbound.send_email(access_token, "Test", 'glohest@vincotte.be', "Mission order attached \n", "./generated/2590476.pdf" )
+        except ValueError:
+            access_token = auth.authenticate_to_ms_graph()
+            outbound.send_email(access_token, "Test", 'glohest@vincotte.be', "Mission order attached \n", "./generated/2590476.pdf" )
