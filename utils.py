@@ -4,28 +4,26 @@ from datetime import datetime, timedelta
 from reportlab.platypus import Paragraph
 import json
 
-def update_token_env(new_token:str):
+def update_token_env(new_token:str, token_key:str):
     """
-    Updates the BEARER_TOKEN value in the .env file with a new token.
+    Updates or adds a token in the .env file.
 
-    This function reads the current contents of the .env file, updates the value of BEARER_TOKEN
-    with the new token provided, and writes the updated content back to the .env file. If the
-    BEARER_TOKEN key does not exist, it appends a new line with the key and the new token value.
+    This function searches for a specific token key in the .env file and updates its value. If the token key does not exist, it appends the key and value to the file.
 
     Parameters:
-    - new_token: The new token value to be updated in the .env file.
+    - new_token (str): The new value for the token.
+    - token_key (str): The key of the token to be updated or added.
 
     Returns:
     - None
     """
     env_file_path = '.env'
-    token_key = 'BEARER_TOKEN'
-    
+
     # Read the current contents of the .env file
     with open(env_file_path, 'r') as file:
         lines = file.readlines()
 
-    # Update the BEARER_TOKEN line
+    # Update the [token_key] line
     updated_lines = []
     token_found = False
     for line in lines:
@@ -35,7 +33,7 @@ def update_token_env(new_token:str):
         else:
             updated_lines.append(line)
     
-    # Append the BEARER_TOKEN line if it wasn't found
+    # Append the [token_key] line if it wasn't found
     if not token_found:
         updated_lines.append(f'{token_key}={new_token}\n')
 
