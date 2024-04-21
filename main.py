@@ -66,14 +66,17 @@ def generate(date:datetime=None):
         missions = json.load(file1)
         sources = json.load(file2)
 
-    # Feed results into process.generate_pdfs() to generate PDF documents based on the missions and sources data
+    sources_double_boookings = process.check_sources_double_bookings(missions)
+    if sources_double_boookings:
+        print("\n/!\WARNING/!\: Double bookings detected for the following sources:")
+        for source in sources_double_boookings:
+            print(f"\nSource \"{source}\" is booked by missions:")
+            for mission in sources_double_boookings[source]:
+                print(f"{mission}")
+        print("\n")
+
+    # Feed data into process.generate_pdfs() to generate PDF documents containing the missions details
     process.generate_pdfs(missions, sources)    
 
-def check_mat_double_booking():
-    # Call ingest.get_events()
-    # Call ingest.get_sources()
-    # Feed results into process.check_conflicts
-    pass
-
-fetch_and_store()
+# fetch_and_store()
 generate()
