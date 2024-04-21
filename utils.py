@@ -145,10 +145,24 @@ def calculate_paragraph_height(text, width, style):
     return height
 
 def ajust_paragraph_height(text, max_height, width, style):
-    # TODO: modify this function to make it iterative so that the 2nd paragraph gets split (if its height is 
-    # superior to the max height) as well into a 3rd paragraph and so on
+    """
+    Adjusts the height of a paragraph by splitting the text into multiple parts if necessary.
 
-    # Initialize the parts
+    This function iteratively splits the input text into multiple parts to ensure that the height of the rendered
+    paragraph does not exceed a specified maximum height. It does so by splitting the text into sentences and
+    gradually moving sentences from the first part to the second part until the height of the first part is within
+    the allowed limit. This process is designed to be extended for splitting into more than two parts if needed.
+
+    Parameters:
+    - text (str): The text content to be split into paragraphs.
+    - max_height (float): The maximum allowed height for a paragraph.
+    - width (int): The width constraint of the paragraph.
+    - style (object): The style to apply to the paragraph, which includes font size and leading.
+
+    Returns:
+    - list: A list of strings, where each string represents a part of the text that fits within the maximum height.
+    """
+    
     # Split the text into sentences
     part1 = split_into_sentences(text)  # Start with all sentences in part1
     part2 = ""
@@ -159,7 +173,7 @@ def ajust_paragraph_height(text, max_height, width, style):
     # Iterate from the end, moving sentences from part1 to part2
     while part1_height > max_height:
         part2 = part1.pop() + " " + part2 # Move the last sentence to part2
-        part1_height = calculate_paragraph_height(" ".join(part1).strip(), width, style) # Re evaluate the height of part1
+        part1_height = calculate_paragraph_height(" ".join(part1).strip(), width, style) # Re-evaluate the height of part1
     
     # Ensure no leading or trailing spaces
     part1 = " ".join(part1).strip()
@@ -172,11 +186,37 @@ def ajust_paragraph_height(text, max_height, width, style):
     return result
 
 def save_to_txt(missions):
-    # write missions to txt file with indentation for dev purpose
+    """
+    Saves a given data structure to a text file in JSON format with indentation.
+
+    This function takes a data structure, converts it to a JSON string with an indentation of 4 spaces for readability,
+    and writes it to a text file. This is particularly useful for development purposes where viewing structured data
+    in a human-readable format is necessary.
+
+    Parameters:
+    - missions (dict or list): The data structure to be saved to the file. This can be any data structure that is
+      serializable to JSON, such as a dictionary or a list.
+
+    Returns:
+    - None
+    """
     with open('example.txt', 'w') as file:
         file.write(json.dumps(missions, indent=4))
 
 def split_into_sentences(text):
+    """
+    Splits a given text into sentences based on punctuation marks.
+
+    This function uses a regular expression to identify periods, exclamation marks, and question marks as sentence
+    delimiters. It is careful to not split on periods that are part of common abbreviations (e.g., Mr., Mrs., Mme., M.).
+    The function returns a list of sentences extracted from the input text.
+
+    Parameters:
+    - text (str): The text to be split into sentences.
+
+    Returns:
+    - list: A list of sentences extracted from the input text. Each sentence is a string.
+    """
     # Create a pattern that matches periods, exclamation marks, or question marks
     # that are not preceded by any of the specified abbreviations.
     pattern = r'(?<!\b(Mr|Mrs|Mme|M)\b\.)(?<=[.!?])\s+(?=[A-Z])'
