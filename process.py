@@ -62,8 +62,12 @@ def generate_pdfs(missions:dict, sources:dict):
             if not resource['label'].startswith("RG -") and not resource['label'].startswith("BUNKER ") and not resource['label'].startswith("Vincotte") and not resource['label'].startswith("LABO "):
                 resources[resource['key']] = {'name': resource['label'], 'phone1': resource['mobile'], 'phone2': resource['phone']}
         
+        # Create directory to store generated PDFs
+        today = datetime.today().strftime("%Y%m%d")
+        if not os.path.exists(f".\generated\{today}"):
+            os.makedirs(f".\generated\{today}")
         # Create a PDF document
-        doc = SimpleDocTemplate(f".\generated\{mission['key']}.pdf", pagesize=A4, topMargin=100)
+        doc = SimpleDocTemplate(f".\generated\{today}\{mission['key']}.pdf", pagesize=A4, topMargin=100)
 
         # Create content elements
         elements = []
