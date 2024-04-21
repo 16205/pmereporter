@@ -8,19 +8,24 @@ from datetime import datetime
 
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
+def init_ppme_api_variables():
+    load_dotenv(override=True)
 
-connection_str = os.environ['HOST'] + 'api/'
+    connection_str = os.environ['PPME_ENDPOINT'] + 'api/'
 
-headers = {
-        'Authorization': 'Bearer ' + os.environ['BEARER_TOKEN'],
-        'X-APPKEY': os.environ['APPKEY'],
+    headers = {
+        'Authorization': 'Bearer ' + os.environ['PPME_BEARER_TOKEN'],
+        'X-APPKEY': os.environ['PPME_APPKEY'],
         'Content-Type': 'application/json'
     }
+
+    return connection_str, headers
 
 def get_events(dateFrom:datetime, dateTo:datetime=None, departments:list=None, resources:list=None, 
                categories:list=[52,60,63,65,78,80]):
     
+    connection_str, headers = init_ppme_api_variables()
+
     dateFrom, dateTo = dateFrom.isoformat(), dateTo.isoformat()
     
     json = {
@@ -55,6 +60,8 @@ def get_events(dateFrom:datetime, dateTo:datetime=None, departments:list=None, r
         sys.exit(f"Failed to retrieve data: {response.status_code}")
 
 def get_locations(missions):
+    connection_str, headers = init_ppme_api_variables()
+
     # Iterate through missions
     print("Getting locations for every mission...")
     for mission in tqdm(missions["items"]):
@@ -109,7 +116,7 @@ def get_sources():
     return sources
 
 def get_departments(id:int=None):
-    
+    connection_str, headers = init_ppme_api_variables()
     params = {
         "pageSize": 999
     }
@@ -123,6 +130,7 @@ def get_departments(id:int=None):
     return response
 
 def get_categories():
+    connection_str, headers = init_ppme_api_variables()
     response = requests.get(connection_str + 'category', headers=headers)
 
     return response
