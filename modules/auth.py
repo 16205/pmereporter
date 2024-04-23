@@ -1,16 +1,14 @@
 from dotenv import load_dotenv
-from exchangelib import Account, OAuth2Credentials, Configuration, Identity
 from msal import ConfidentialClientApplication
-from office365.runtime.auth.authentication_context import AuthenticationContext
 from office365.runtime.auth.client_credential import ClientCredential
 from office365.sharepoint.client_context import ClientContext
+from .utils import update_token_env
 import http.server
 import os
 import requests
 import socketserver
 import threading
 import urllib
-import utils
 import webbrowser
 
 def authenticate_to_ppme():
@@ -44,7 +42,7 @@ def authenticate_to_ppme():
         data = response.json()
         # Using '.get()' so it returns {} if key 'access_token' does not exist
         bearer_token = data.get('access_token', {})
-        utils.update_token_env(bearer_token, 'PPME_BEARER_TOKEN')
+        update_token_env(bearer_token, 'PPME_BEARER_TOKEN')
         print("Successfully authenticated")
         return
     else:
@@ -75,18 +73,18 @@ def authenticate_to_shpt():
 
 def authenticate_to_ms_graph():
     """
-    Authenticates to Microsoft Graph using the OAuth 2.0 client credentials flow.
+    Authenticates to Microsoft Graph using the OAuth 2.0 authorization code flow. This function initializes
+    an MSAL ConfidentialClientApplication, starts a temporary web server to listen for the OAuth callback,
+    and extracts the authorization code from the callback URL. It then exchanges the authorization code for
+    an access token and a refresh token, and updates these tokens in the environment variables.
 
-    This function retrieves the client ID and client secret from the environment
-    variables and creates a confidential client application using the MSAL library.
-    It then uses the authorization code to obtain an access token and refresh token
-    from the Microsoft identity platform. The access token is stored in the
-    MS_ACCESS_TOKEN environment variable and the refresh token is stored in the
-    MS_REFRESH_TOKEN environment variable.
+    The function uses environment variables to get the client ID, client secret, and tenant ID required for
+    authentication. It defines a scope that includes permissions to send mail and read user profiles.
 
     Returns:
-        str: The access token obtained from the Microsoft identity platform.
+        str: The access token acquired from Microsoft Graph if authentication is successful, None otherwise.
     """
+
     load_dotenv(override=True)
     # Constants
     CLIENT_ID = os.environ['MS_CLIENT_ID']
@@ -101,6 +99,17 @@ def authenticate_to_ms_graph():
     # Function to handle the OAuth callback and extract the authorization code
     class Handler(http.server.SimpleHTTPRequestHandler):
         def do_GET(self):
+            """
+            Handles GET requests sent to the temporary web server. It extracts the authorization code from
+            the query parameters of the request URL. If an authorization code is found, it signals the server
+            to shutdown and updates the global variable `authorization_code` with the received code.
+
+            Parameters:
+                None
+
+            Returns:
+                None
+            """
             global authorization_code
             self.send_response(200)
             self.send_header('Content-type', 'text/html')
@@ -118,6 +127,16 @@ def authenticate_to_ms_graph():
 
     # Start temporary web server on a separate thread
     def run_server():
+        """
+        Starts a temporary web server on a new thread to listen for the OAuth callback. The server runs
+        on localhost and listens on port 8000.
+
+        Parameters:
+            None
+
+        Returns:
+            None
+        """
         global httpd
         with socketserver.TCPServer(("", 8000), Handler) as httpd:
             httpd.serve_forever()
@@ -135,8 +154,8 @@ def authenticate_to_ms_graph():
     if authorization_code:
         result = app.acquire_token_by_authorization_code(authorization_code, scopes=SCOPE)
         if result and 'access_token' in result and 'refresh_token' in result:
-            utils.update_token_env(result['access_token'], 'MS_ACCESS_TOKEN')
-            utils.update_token_env(result['refresh_token'], 'MS_REFRESH_TOKEN')
+            update_token_env(result['access_token'], 'MS_ACCESS_TOKEN')
+            update_token_env(result['refresh_token'], 'MS_REFRESH_TOKEN')
             print('Token acquired')
             return result['access_token']
         else:
@@ -145,6 +164,18 @@ def authenticate_to_ms_graph():
         print('No authorization code was received.')
 
 def refresh_access_token():
+    """
+    This function is used to refresh the access token for Microsoft Graph.
+
+    Args:
+        None
+
+    Returns:
+        str: The refreshed access token
+
+    Raises:
+        requests.exceptions.HTTPError: If the request to refresh the access token fails
+    """
     CLIENT_ID = os.environ['MS_CLIENT_ID']
     CLIENT_SECRET = os.environ['MS_CLIENT_SECRET']
     TENANT_ID = os.environ['MS_TENANT_ID']
@@ -163,6 +194,6 @@ def refresh_access_token():
     response = requests.post(token_url, headers=headers, data=body)
     response.raise_for_status()
     new_tokens = response.json()
-    utils.update_token_env(new_tokens.get('access_token'), 'MS_ACCESS_TOKEN')
-    utils.update_token_env(new_tokens.get('refresh_token'), 'MS_REFRESH_TOKEN')
+    update_token_env(new_tokens.get('access_token'), 'MS_ACCESS_TOKEN')
+    update_token_env(new_tokens.get('refresh_token'), 'MS_REFRESH_TOKEN')
     return new_tokens['access_token']

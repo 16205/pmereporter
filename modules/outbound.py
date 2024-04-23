@@ -35,27 +35,25 @@ def send_email(access_token:str, subject:str, recipient:str, content:str, file_p
     
     # Add an attachment if a file path is provided
     if file_path:
-        try:
-            with open(file_path, "rb") as file:
-                # Read the file and encode it in base64
-                file_content = base64.b64encode(file.read()).decode()
-                
-            # Get the file name
-            file_name = file_path.split('/')[-1]
+        with open(file_path, "rb") as file:
+            # Read the file and encode it in base64
+            file_content = base64.b64encode(file.read()).decode()
             
-            # Add the attachment to the message payload
-            email_data["message"]["attachments"].append({
-                "@odata.type": "#microsoft.graph.fileAttachment",
-                "name": file_name,
-                "contentType": "application/octet-stream",  # You might want to adjust this based on the file type
-                "contentBytes": file_content
-            })
-        except IOError:
-            return None, "File could not be opened."
+        # Get the file name
+        file_name = file_path.split('/')[-1]
+        
+        # Add the attachment to the message payload
+        email_data["message"]["attachments"].append({
+            "@odata.type": "#microsoft.graph.fileAttachment",
+            "name": file_name,
+            "contentType": "application/octet-stream",  # You might want to adjust this based on the file type
+            "contentBytes": file_content
+        })
     
     # Send the email
     response = requests.post(SENDMAIL_ENDPOINT, headers=headers, json=email_data)
     if response.status_code == 202:
-        print(f"Email sent to {recipient}.")
+        # print(f"Email sent to {recipient}.")
+        return
     else:
         raise ValueError(f"Failed to send email to {recipient}. {response.status_code} {response.reason}")

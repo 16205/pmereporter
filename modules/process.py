@@ -1,15 +1,14 @@
 from datetime import datetime
+from dotenv import load_dotenv
+from modules import auth, outbound, utils
 from tqdm import tqdm
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_JUSTIFY
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Spacer, PageBreak
-import auth
 import os
-import outbound
 import sys
-import utils
 
 def get_resources_from_departments(departments):
     """
@@ -473,15 +472,30 @@ def check_sources_double_bookings(missions:dict):
 
     return double_bookings
 
-def send_om():
+def send_om(missions, date):
+    load_dotenv(override=True)
     access_token = os.environ.get('MS_ACCESS_TOKEN')
-
-    try: 
-        outbound.send_email(access_token, "Test", 'glohest@vincotte.be', "Mission order attached \n", "./generated/2590476.pdf" )
-    except ValueError:
-        try:
-            access_token = auth.refresh_access_token()
-            outbound.send_email(access_token, "Test", 'glohest@vincotte.be', "Mission order attached \n", "./generated/2590476.pdf" )
+    print("Sending mission orders...")
+    for mission in tqdm(missions['items']):
+        recipients = []
+        for resource in mission.get('resources'):
+            recipients.append(resource.get('email'))
+        recipients = [r for r in recipients if r and r != '']
+        number = mission.get('key')
+        intervention_date = datetime.strptime(mission['start'], "%Y-%m-%dT%H:%M:%S").strftime('%d/%m/%Y')
+        content = f"Please find in attachment the Intervention Document (Nr: {number})\n\n"
+        attachment_path = f"./generated/{date.strftime('%Y%m%d')}/{number}.pdf"
+        recipients_str = ""
+        for recipient in recipients:
+            recipients_str += recipient + ",\n"
+        try: 
+            outbound.send_email(access_token, f"Mission order n°{number} - {intervention_date}", 'glohest@vincotte.be', content+recipients_str, attachment_path)
         except ValueError:
-            access_token = auth.authenticate_to_ms_graph()
-            outbound.send_email(access_token, "Test", 'glohest@vincotte.be', "Mission order attached \n", "./generated/2590476.pdf" )
+            try:
+                access_token = auth.refresh_access_token()
+                outbound.send_email(access_token, f"Mission order n°{number} - {intervention_date}", 'glohest@vincotte.be', content+recipients_str, attachment_path)
+            except ValueError:
+                access_token = auth.authenticate_to_ms_graph()
+                outbound.send_email(access_token, f"Mission order n°{number} - {intervention_date}", 'glohest@vincotte.be', content+recipients_str, attachment_path)
+
+    print("Mission orders sent!")

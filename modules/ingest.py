@@ -1,12 +1,10 @@
-import auth
+from datetime import datetime
+from dotenv import load_dotenv
+from modules import auth
+from tqdm import tqdm
 import os
 import requests
-import utils
 import sys
-from tqdm import tqdm
-from datetime import datetime
-
-from dotenv import load_dotenv
 
 def init_ppme_api_variables():
     load_dotenv(override=True)
@@ -55,11 +53,11 @@ def get_events(dateFrom:datetime, dateTo:datetime=None, departments:list=None, r
         return response.json()
     
     elif response.status_code == 401:
-        sys.exit(f"Please (re)authenticate to PlanningPME API before requesting for data. {response.status_code} Unauthorized.")
+        raise Exception(f"Please (re)authenticate to PlanningPME API before requesting for data. {response.status_code} Unauthorized.")
     else:
         sys.exit(f"Failed to retrieve data: {response.status_code}")
 
-def get_locations(missions):
+def get_locations(missions:dict):
     connection_str, headers = init_ppme_api_variables()
 
     # Iterate through missions

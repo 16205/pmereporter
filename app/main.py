@@ -1,11 +1,11 @@
 from datetime import datetime
-import ingest
-import auth
-import process
 import json
-import utils
-
-# auth.authenticate_to_ppme()
+import os
+import sys
+# Add the parent directory to sys.path to access the `modules` package
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from modules import ingest, process, utils
+from modules.auth import authenticate_to_ppme
 
 dateFrom = datetime(2023, 11, 21)
 dateTo = datetime(2023, 11, 21, 23, 59, 59, 999)
@@ -26,8 +26,12 @@ def fetch_and_store(date:datetime=None):
     Returns:
     - None. This function does not return any value but writes data to files.
     """
-    # Call ingest.get_events() to fetch events within the specified date range (PPME       in )
-    missions = ingest.get_events(dateFrom, dateTo, departments=[30])
+    try:    
+        # Call ingest.get_events() to fetch events within the specified date range (PPME       in )
+        missions = ingest.get_events(dateFrom, dateTo, departments=[30])
+    except Exception:
+        authenticate_to_ppme()
+        missions = ingest.get_events(dateFrom, dateTo, departments=[30])
 
     # Call ingest.get_locations() to enrich missions with location data        (PPME       in )
     missions = ingest.get_locations(missions)
@@ -78,5 +82,12 @@ def generate(date:datetime=None):
     # Feed data into process.generate_pdfs() to generate PDF documents containing the missions details
     process.generate_pdfs(missions, sources)    
 
-# fetch_and_store()
+def send():
+    with open('temp/missions.json', 'r') as file:
+        missions = json.load(file)
+    process.send_om(missions, datetime.today())
+
+# authenticate_to_ppme()
+fetch_and_store()
 generate()
+send()
