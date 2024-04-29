@@ -1,7 +1,7 @@
 import base64
 import requests
 
-def send_email(access_token:str, subject:str, recipient:str, content:str, file_path:str=None):
+def send_email(access_token:str, subject:str, recipients:list, content:str, file_path:str=None):
     # Constants
     SENDMAIL_ENDPOINT = 'https://graph.microsoft.com/v1.0/me/sendMail'
 
@@ -24,9 +24,7 @@ def send_email(access_token:str, subject:str, recipient:str, content:str, file_p
             "toRecipients": [
                 {
                     "emailAddress": {
-                        "address": recipient
-                    }
-                }
+                        "address": recipient}} for recipient in recipients
             ],
             "attachments": []
         },
@@ -56,4 +54,4 @@ def send_email(access_token:str, subject:str, recipient:str, content:str, file_p
         # print(f"Email sent to {recipient}.")
         return
     else:
-        raise ValueError(f"Failed to send email to {recipient}. {response.status_code} {response.reason}")
+        raise ValueError(f"Failed to send email to {[recipient for recipient in recipients]}. {response.status_code} {response.reason}")
