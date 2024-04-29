@@ -2,7 +2,6 @@ from datetime import datetime
 import json
 import os
 import sys
-# Add the parent directory to sys.path to access the `modules` package
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from modules import ingest, process, utils
 from modules.auth import authenticate_to_ppme
@@ -33,6 +32,9 @@ def fetch_and_store(date:datetime=None):
         authenticate_to_ppme()
         missions = ingest.get_events(dateFrom, dateTo, departments=[30])
 
+    # Call process.clean_data() to clean the missions data
+    missions = process.clean_data(missions)
+    
     # Call ingest.get_locations() to enrich missions with location data        (PPME       in )
     missions = ingest.get_locations(missions)
 
@@ -87,7 +89,6 @@ def send():
         missions = json.load(file)
     process.send_om(missions, datetime.today())
 
-# authenticate_to_ppme()
-fetch_and_store()
-generate()
-send()
+# fetch_and_store()
+# generate()
+# send()
