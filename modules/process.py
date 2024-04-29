@@ -8,6 +8,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Spacer, PageBreak
 import os
+import re
 import sys
 
 def get_resources_from_departments(departments):
@@ -55,12 +56,10 @@ def generate_pdfs(missions:dict, sources:dict):
     styles.add(ParagraphStyle(name='Justify', parent=styles['Normal'], fontSize=10, fontName='Helvetica', alignment=TA_JUSTIFY,))
     smaller_font_style = ParagraphStyle('SmallerFont', parent=styles['Normal'], fontSize=9, fontName='Helvetica')
 
-    for mission in tqdm(missions["items"]):
-        resources = {}
-        for resource in mission["resources"]:
-            if not resource['label'].startswith("RG -") and not resource['label'].startswith("BUNKER ") and not resource['label'].startswith("Vincotte") and not resource['label'].startswith("LABO "):
-                resources[resource['key']] = {'name': resource['label'], 'phone1': resource['mobile'], 'phone2': resource['phone']}
-        
+    for mission in tqdm(missions):     
+        # Convert start and end times to datetime objects
+        mission_start = datetime.strptime(mission['start'], '%Y-%m-%d %H:%M:%S')
+        mission_end = datetime.strptime(mission['end'], '%Y-%m-%d %H:%M:%S')  
         # Create directory to store generated PDFs
         today = datetime.today().strftime("%Y%m%d")
         if not os.path.exists(f".\generated\{today}"):
@@ -73,7 +72,7 @@ def generate_pdfs(missions:dict, sources:dict):
 
         # Add content:
         # -----------Title-----------
-        elements.append(Paragraph(f"Mission order n° {mission['key']} - Vinçotte NDT", styles['Title']))
+        elements.append(Paragraph(f"Mission order n° {mission.get('key')} - Vinçotte NDT", styles['Title']))
         elements.append(Spacer(1, 10))
 
         # ------------------------------------- Mission details -------------------------------------
@@ -81,76 +80,54 @@ def generate_pdfs(missions:dict, sources:dict):
                 
         # Table data
         mission_table_data = []
-        
-        # Parse the datetime string into a datetime object
-        datetime_start = datetime.strptime(mission['start'], "%Y-%m-%dT%H:%M:%S")
-        datetime_end = datetime.strptime(mission['end'], "%Y-%m-%dT%H:%M:%S")
             
         # -----------Date and time-----------
-        mission_table_data.append([Paragraph("<b>Date of intervention</b>"), Paragraph(f"{datetime_start.strftime('%d/%m/%Y')}")])
-        mission_table_data.append([Paragraph("<b>Start time</b>"), Paragraph(f"{datetime_start.strftime('%H:%M')}")])
-        mission_table_data.append([Paragraph("<b>End time</b>"), Paragraph(f"{datetime_end.strftime('%H:%M')}")])
+        mission_table_data.append([Paragraph("<b>Date of intervention</b>"), Paragraph(f"{mission_start.strftime('%d %b %Y')}")])
+        mission_table_data.append([Paragraph("<b>Start time</b>"), Paragraph(f"{mission_start.strftime('%H:%M')}")])
+        mission_table_data.append([Paragraph("<b>End time</b>"), Paragraph(f"{mission_end.strftime('%H:%M')}")])
         
         # -----------Agents-----------
-        for index, item in enumerate(resources):
-            agent_name_label = "<b>Agent</b><br/><br/>" if len(resources) == 1 else f"<b>Agent {index+1}</b><br/><br/>"
-            agent_name = resources[item]['name']+"<br/>"
+        for index, item in enumerate(mission.get('resources')):
+            agent_name_label = "<b>Agent</b><br/><br/>" if len(mission.get('resources')) == 1 else f"<b>Agent {index+1}</b><br/><br/>"
+            agent_name = f"{item.get('firstName')} {item.get('lastName')}<br/>"
             
             agent_phone_label = "<b>Phone</b>"
-            agent_phone1 = ""
-            agent_phone2 = ""
-            if resources[item]['phone1'] != '+32' and not None:
-                agent_phone1 = "<br/>"+resources[item]['phone1']
-            if resources[item]['phone2'] != '+32' and not None:
-                if resources[item]['phone2'] != resources[item]['phone1']:
-                    agent_phone2 = "<br/>"+resources[item]['phone2']
+            agent_phone1 = f"<br/>{item.get('mobile1')}" if item.get('mobile1') else ''
+            agent_phone2 = f"<br/>{item.get('mobile2')}" if item.get('mobile2') else ''
             
             mission_table_data.append([Paragraph(agent_name_label+agent_phone_label), 
                                        Paragraph(agent_name+agent_phone1+agent_phone2)])
             
         # -----------Clients-----------
         for index, item in enumerate(mission['customers']):
-            client_name_label = "<b>Client</b><br/><br/>" if len(mission['customers']) == 1 else f"<b>Client {index+1}</b><br/><br/>"    
-            client_name = mission['customers'][index]['label']+"<br/>"
+            client_name_label = "<b>Client</b><br/><br/>" if len(mission.get('customers', '')) == 1 else f"<b>Client {index+1}</b><br/><br/>"    
+            client_name = f"{item.get('label')}<br/>"
 
             client_phone_label = "<b>Phone</b>"
-            client_phone1 = ""
-            client_phone2 = ""
-            if mission['customers'][index]['phone'] != '+32' and not None:
-                client_phone1 = "<br/>"+mission['customers'][index]['phone']
-            if mission['customers'][index]['mobile'] != '+32' and not None:
-                if mission['customers'][index]['mobile'] != mission['customers'][index]['phone']:
-                    client_phone2 = "<br/>"+mission['customers'][index]['mobile']
+            client_phone1 = f"<br/>{item.get('phone1')}" if item.get('phone1') else ''
+            client_phone2 = f"<br/>{item.get('phone2')}" if item.get('phone2') else ''
             
             mission_table_data.append([Paragraph(client_name_label+client_phone_label), 
                                        Paragraph(client_name+client_phone1+client_phone2)])
 
         # -----------Service order number-----------
-        if 'project' in mission and mission['project']['fields']['PROJET_SO_NUMBER'] is not None:
-            so_number = (mission['project']['fields']['PROJET_SO_NUMBER']).lstrip("0")
-            mission_table_data.append([Paragraph("<b>Service order n°</b>"), Paragraph(f"{so_number}")])
-        
+        if mission.get('SOnumber'):
+            mission_table_data.append([Paragraph("<b>Service order n°</b>"), Paragraph(f"{mission.get('SOnumber')}")])
+
         # -----------Location-----------
-        if 'location' in mission:
-            if mission['location'] is not None:
-                mission_table_data.append([Paragraph("<b>Intervention location</b>"), Paragraph(f"{mission['location']}")])
+        if mission.get('location') != "Run get_locations()":
+            mission_table_data.append([Paragraph("<b>Intervention location</b>"), Paragraph(f"{mission.get('location')}")])
         else: 
-            sys.exit('Mission intervention location missing, please first run ingest.get_locations()!')
+            raise ValueError('Mission intervention location missing, please first run ingest.get_locations()!')
 
         # -----------Departure location-----------
-        departureplace = mission.get('fields').get('DEPARTUREPLACE')
-        if departureplace is not None and departureplace!= '':
+        departureplace = mission.get('departurePlace')
+        if departureplace:
             mission_table_data.append([Paragraph("<b>Departure location</b>"), Paragraph(f"{departureplace}")])
 
         # -----------Info/comments-----------
-        comments = [mission.get('fields').get('COMMENTS_LOCATION'),
-                    mission.get('remark'),
-                    mission.get('fields').get('TASKCOMMENTS'),
-                    mission.get('customers')[0].get('fields').get('COMMENTSCUSTOMER')]
+        comments = mission.get('comments')
         
-        # Remove empty or None values
-        comments = [comment for comment in comments if comment is not None and comment!= '']
-
         # Format text for pretty display
         for i in range(len(comments)):
             comments[i] = utils.format_text(comments[i])
@@ -164,6 +141,7 @@ def generate_pdfs(missions:dict, sources:dict):
         max_width = 320
         actual_height = utils.calculate_paragraph_height(comments_text, max_width, styles['Normal'])
 
+        # Checking if height > max height to avoid running 'ajust_paragraph_height' if not needed
         if actual_height > max_height:
             # Split total comments text into two paragraphs if height > max height
             comments_paragraph = utils.ajust_paragraph_height(comments_text, max_height, max_width, styles['Normal'])
@@ -195,18 +173,9 @@ def generate_pdfs(missions:dict, sources:dict):
         elements.append(mission_table)
 
         # Norms & criteria
-        norm_crit_list = [mission.get('fields').get('NORMCR1'),
-                          mission.get('fields').get('NORMCR2'),
-                          mission.get('fields').get('NORMCR3'),
-                          mission.get('fields').get('NORMCR4'),
-                          mission.get('fields').get('NORMCR5'),
-                          mission.get('fields').get('NORMCR6'),
-                          mission.get('fields').get('NORMCR7')]
+        norm_crit_list = mission.get('normCr')
         
-        # Remove empty or None values
-        norm_crit_list = [n for n in norm_crit_list if n is not None and n!= '']
-        
-        # Check if any norms or criteria are present, that is not None
+        # Check if any norms or criteria are present
         if any(norm_crit_list):        
             # -----------Norms & criteria heading-----------
             elements.append(Paragraph("Norms & criteria", styles['Heading4']))
@@ -225,13 +194,7 @@ def generate_pdfs(missions:dict, sources:dict):
 
         # ------------------------------------- ADR Information -------------------------------------
         # Check if RT mission
-        mission_sources = [mission.get('fields').get('SOURCES'),
-                           mission.get('fields').get('SOURCESII'),
-                           mission.get('fields').get('SOURCESIII'),
-                           mission.get('fields').get('SOURCESIV')]
-        
-        # Remove empty or None values
-        mission_sources = [s for s in mission_sources if s is not None and s!= '']
+        mission_sources = mission.get('sources')
                 
         # Check if any sources are present
         if any(mission_sources):
@@ -240,17 +203,44 @@ def generate_pdfs(missions:dict, sources:dict):
 
             # -----------Sender / Receiver table-----------
             s_r_table_data = []
-            s_r_table_data.append([Paragraph("<b>Verzender / Expéditeur</b>"),
-                                   Paragraph("<b>Bestemmeling / Destinataire</b>")])
             addresses = {'Villers-Le-Bouillet': 'Rue de la métallurgie 47<br/>4530 Villers-Le-Bouillet',
-                         'Houdeng': 'Chaussée Paul Houtart 88<br/>7100 Houdeng-Goegnies'}
-            if 'Houdeng' in departureplace:
-                departureplace = 'Houdeng'
-            s_r_table_data.append([Paragraph(f"Vinçotte NV<br/><br/>{addresses.get(departureplace)}"),
-                                   Paragraph(f"{client_name}<br/>{mission['location']}")])
-            s_r_table = Table(s_r_table_data)
-            s_r_table.setStyle(style)
-            elements.append(s_r_table)
+                         'Houdeng': 'Chaussée Paul Houtart 88<br/>7100 Houdeng-Goegnies',
+                         'Wijnegem': 'Bijkhoevelaan 7<br/>2110 Wijnegem'}
+            # Check if one way transport
+            if mission.get('oneWayTransport') == True:
+                s_r_table_data.append([Paragraph("<b>Verzender / Expéditeur</b>"),
+                                   Paragraph("<b>Bestemmeling / Destinataire</b>")])
+                if mission.get('return') == True:
+                    s_r_table_data.append([Paragraph(f"{client_name}<br/>{mission['location']}"),
+                                            Paragraph(f"Vinçotte NV<br/><br/>{addresses.get(departureplace)}")])
+                else:
+                    s_r_table_data.append([Paragraph(f"Vinçotte NV<br/><br/>{addresses.get(departureplace)}"),
+                                            Paragraph(f"{client_name}<br/>{mission['location']}")])
+                s_r_table = Table(s_r_table_data)
+                s_r_table.setStyle(style)
+                elements.append(s_r_table)
+
+            else:
+                elements.append(Paragraph('Aller / Heen', styles['Heading5']))
+                s_r_table_data.append([Paragraph("<b>Verzender / Expéditeur</b>"),
+                                   Paragraph("<b>Bestemmeling / Destinataire</b>")])
+                s_r_table_data.append([Paragraph(f"Vinçotte NV<br/><br/>{addresses.get(departureplace)}"),
+                                        Paragraph(f"{client_name}<br/>{mission['location']}")])
+                
+                s_r_table = Table(s_r_table_data)
+                s_r_table.setStyle(style)
+                elements.append(s_r_table)
+
+                elements.append(Paragraph('Retour / Terug', styles['Heading5']))
+                s_r_table_data = []
+                s_r_table_data.append([Paragraph("<b>Verzender / Expéditeur</b>"),
+                                   Paragraph("<b>Bestemmeling / Destinataire</b>")])
+                s_r_table_data.append([Paragraph(f"{client_name}<br/>{mission['location']}"),
+                                        Paragraph(f"Vinçotte NV<br/><br/>{addresses.get(departureplace)}")])
+                
+                s_r_table = Table(s_r_table_data)
+                s_r_table.setStyle(style)
+                elements.append(s_r_table)
             
             # -----------Description-----------
             elements.append(Paragraph("<b>Getransporteerde ADR stoffen: / Marchandises ADR transportées:</b>", styles['Heading4']))
@@ -260,7 +250,7 @@ def generate_pdfs(missions:dict, sources:dict):
                 # -----------Isotope n° heading-----------
                 if len(mission_sources)>1:
                     i+=1
-                    elements.append(Paragraph(f"<b>Isotope {i}</b>", styles['Heading4']))
+                    elements.append(Paragraph(f"<b>Isotope {i}</b>", styles['Heading5']))
 
                 # Table data
                 ADR_table_data = []
@@ -284,8 +274,8 @@ def generate_pdfs(missions:dict, sources:dict):
                 A0 = sources[source]['GBq']
                 A0_date = utils.iso_to_datetime(sources[source]['Calibrationdate'])
 
-                GBq, Ci = compute_activity(A0, A0_date, isotope, datetime_start)
-                ADR_table_data.append([Paragraph(f"<b>Activiteit op {datetime_start.strftime('%d/%m/%Y')} /<br/>Activité le {datetime_start.strftime('%d/%m/%Y')}</b>", smaller_font_style),
+                GBq, Ci = compute_activity(A0, A0_date, isotope, mission_start)
+                ADR_table_data.append([Paragraph(f"<b>Activiteit op {mission_start.strftime('%d %b %Y')} /<br/>Activité le {mission_start.strftime('%d %b %Y')}</b>", smaller_font_style),
                                        Paragraph(f"{GBq} GBq - {Ci} Ci", smaller_font_style)])
                 
                 # -----------Package category-----------
@@ -323,7 +313,7 @@ def generate_pdfs(missions:dict, sources:dict):
                                            Paragraph(f"{focus} mm", smaller_font_style)])
 
                 # Create the table with the data
-                ADR_table = Table(ADR_table_data, colWidths=[120, None])
+                ADR_table = Table(ADR_table_data, colWidths=[125, None])
 
                 # Define a TableStyle
                 styleADR = TableStyle([
@@ -341,15 +331,15 @@ def generate_pdfs(missions:dict, sources:dict):
                 # Add table to list of flowables
                 elements.append(ADR_table)
 
-                elements.append(Spacer(1, 20))
+                elements.append(Spacer(1, 10))
 
                 if len(mission_sources)>1 and i < len(mission_sources):
                     elements.append(PageBreak())
 
-            elements.append(Paragraph("Signatures", styles['Heading4']))
-            elements.append(Spacer(1, 20))
-            
             # -----------Signatures of concerned parties-----------
+            elements.append(Paragraph("Signatures", styles['Heading4']))
+            elements.append(Spacer(1, 10))
+            
             signatures_table_data = []
             signatures_table_data.append(["Verzender / Expéditeur",
                                           "Vervoerder / Transporteur",
@@ -442,20 +432,24 @@ def add_header_footer(canvas, doc):
     
     canvas.restoreState()
 
-def check_sources_double_bookings(missions:dict):
+def check_sources_double_bookings(missions: list) -> dict:
+    """
+    This function iterates over a list of missions and stores in a dictionary all sources that are present in more than one mission.
+    It then returns a dictionary of sources that are present in more than one mission, along with a list of the missions in which they are present.
+
+    Parameters:
+    missions (list): A list of mission dictionaries. Each dictionary must contain a 'sources' key, which is a list of source dictionaries.
+
+    Returns:
+    double_bookings (dict): A dictionary of sources that are present in more than one mission, along with a list of the missions in which they are present.
+    """
     booked_sources = {}
 
     # Iterate over all missions
-    for mission in missions['items']:
+    for mission in missions:
         sources = []
-        sources = [mission.get('fields').get('SOURCES'),
-                   mission.get('fields').get('SOURCESII'),
-                   mission.get('fields').get('SOURCESIII'),
-                   mission.get('fields').get('SOURCESIV')]
-        
-        # Remove empty or None values
-        sources = [s for s in sources if s is not None and s!= '']
-        
+        sources = mission.get('sources')
+
         # Store any not None sources in booked_sources
         if any(sources):
             for s in sources:
@@ -463,7 +457,7 @@ def check_sources_double_bookings(missions:dict):
                     booked_sources[s].append(mission.get('key'))
                 else:
                     booked_sources[s] = [mission.get('key')]
-    
+
     # Check for double bookings in booked_sources
     double_bookings = {}
     for source in booked_sources:
@@ -476,26 +470,120 @@ def send_om(missions, date):
     load_dotenv(override=True)
     access_token = os.environ.get('MS_ACCESS_TOKEN')
     print("Sending mission orders...")
+    # Iterate over all missions
     for mission in tqdm(missions['items']):
+        # Initialize empty list of recipients
         recipients = []
+        # Iterate over all mission resources
         for resource in mission.get('resources'):
             recipients.append(resource.get('email'))
+        # Remove any empty or None values
         recipients = [r for r in recipients if r and r != '']
         number = mission.get('key')
-        intervention_date = datetime.strptime(mission['start'], "%Y-%m-%dT%H:%M:%S").strftime('%d/%m/%Y')
+        intervention_date = (mission['start'], "%Y-%m-%dT%H:%M:%S").strftime('%d/%m/%Y')
         content = f"Please find in attachment the Intervention Document (Nr: {number})\n\n"
         attachment_path = f"./generated/{date.strftime('%Y%m%d')}/{number}.pdf"
-        recipients_str = ""
+        # recipients_str is for development purposes
+        recipients_str = "["
         for recipient in recipients:
             recipients_str += recipient + ",\n"
+        recipients_str += "]"
         try: 
-            outbound.send_email(access_token, f"Mission order n°{number} - {intervention_date}", 'glohest@vincotte.be', content+recipients_str, attachment_path)
+            outbound.send_email(access_token, f"Mission order n°{number} - {intervention_date}", ['glohest@vincotte.be', 'gabriellohest@gmail.com'], content+recipients_str, attachment_path)
         except ValueError:
             try:
                 access_token = auth.refresh_access_token()
-                outbound.send_email(access_token, f"Mission order n°{number} - {intervention_date}", 'glohest@vincotte.be', content+recipients_str, attachment_path)
+                outbound.send_email(access_token, f"Mission order n°{number} - {intervention_date}", ['glohest@vincotte.be'], content+recipients_str, attachment_path)
             except ValueError:
                 access_token = auth.authenticate_to_ms_graph()
-                outbound.send_email(access_token, f"Mission order n°{number} - {intervention_date}", 'glohest@vincotte.be', content+recipients_str, attachment_path)
+                outbound.send_email(access_token, f"Mission order n°{number} - {intervention_date}", ['glohest@vincotte.be'], content+recipients_str, attachment_path)
 
     print("Mission orders sent!")
+
+def clean_data(missions):
+    missions_cleaned = []
+    for mission in missions['items']:
+        # Initialize each mission with defaults
+        mission_dict = {
+            "key": mission.get('key'),
+            "resources": [],
+            "start": str(datetime.strptime(mission.get('start'), "%Y-%m-%dT%H:%M:%S")),
+            "end": str(datetime.strptime(mission.get('end'), "%Y-%m-%dT%H:%M:%S")),
+            "comments": [],
+            "customers": [],
+            "SOnumber": mission.get('project').get('fields').get('PROJET_SO_NUMBER'),
+            "departurePlace": mission.get('fields').get('DEPARTUREPLACE') if mission.get('fields').get('DEPARTUREPLACE') != '' else None,
+            "normCr": [],
+            "sources": [],
+            "location": "Run get_locations()",
+            "oneWayTransport": mission.get('fields').get('ONEWAYTRANSPORT'),
+            "return": False
+        }
+
+        # Remove leading zeroes from SOnumbers
+        if mission_dict['SOnumber']:
+            mission_dict['SOnumber'] = mission_dict['SOnumber'].lstrip('0')
+
+        # Check if ADR return
+        if mission_dict['departurePlace']:
+            match = re.search(r'Client return(.*)', mission_dict['departurePlace'])
+            if match:
+                mission_dict['departurePlace'] = match.group(1).strip()
+                mission_dict['return'] = True
+
+        # Populate resources if available
+        for resource in mission.get('resources', []):
+            if not any(x in resource.get('label') for x in ["RG -", "BUNKER ", "Vincotte", "LABO "]):
+                mission_dict['resources'].append({
+                    "lastName": resource.get('lastName'),
+                    "firstName": resource.get('firstName'),
+                    "mobile1": resource.get('mobile') if resource.get('mobile') not in ('+32', '') else None,
+                    "mobile2": resource.get('phone') if resource.get('phone') not in ('+32', '') and \
+                                                        resource.get('phone') != resource.get('mobile') else None,
+                    "email": re.sub(r';.*$', '', resource.get('email')),    # Remove anything after the first semicolon (some agents have
+                                                                            # multiple email addresses registered in the same field),
+                    "AVnumber": resource.get('registrationNumber')
+})
+                
+        # Populate comments if available
+        mission_dict['comments'] = [mission.get('fields').get('COMMENTS_LOCATION'), 
+                                    mission.get('remark'), 
+                                    mission.get('fields').get('TASKCOMMENTS'), 
+                                    mission.get('customers')[0].get('fields').get('COMMENTSCUSTOMER')]
+        # Remove empty or None values
+        mission_dict['comments'] = [comment for comment in mission_dict['comments'] if comment is not None and comment!= '']
+        
+        # Populate customers if available
+        for customer in mission.get('customers', []):
+            mission_dict['customers'].append({
+                "label": customer.get('label'),
+                "phone1": customer.get('phone') if customer.get('phone') not in ('+32', '') else None,
+                "phone2": customer.get('mobile') if customer.get('mobile') not in ('+32', '') and \
+                                                    customer.get('mobile') != customer.get('phone') else None,
+            })
+
+        # Populate normCr if available
+        mission_dict['normCr'] = [mission.get('fields').get('NORM_CR_1'), 
+                                   mission.get('fields').get('NORM_CR_2'), 
+                                   mission.get('fields').get('NORM_CR_3'), 
+                                   mission.get('fields').get('NORM_CR_4'), 
+                                   mission.get('fields').get('NORM_CR_5'), 
+                                   mission.get('fields').get('NORM_CR_6'), 
+                                   mission.get('fields').get('NORM_CR_7')]
+        # Remove empty or None values
+        mission_dict['normCr'] = [normCr for normCr in mission_dict['normCr'] if normCr is not None and normCr!= '']
+        
+        # Populate sources if available
+        mission_dict['sources'] = [mission.get('fields').get('SOURCES'),
+                                   mission.get('fields').get('SOURCESII'),
+                                   mission.get('fields').get('SOURCESIII'),
+                                   mission.get('fields').get('SOURCESIV')]
+        # Remove empty or None values
+        mission_dict['sources'] = [s for s in mission_dict['sources'] if s is not None and s!= '']
+        
+        # Populate location if available
+        mission_dict['location'] = mission.get('location') if mission.get('location') != '' else None
+
+        missions_cleaned.append(mission_dict)
+
+    return missions_cleaned
