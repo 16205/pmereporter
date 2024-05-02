@@ -9,47 +9,51 @@ from modules.auth import authenticate_to_ppme
 dateFrom = datetime(2023, 11, 21)
 dateTo = datetime(2023, 11, 21, 23, 59, 59, 999)
 
-def fetch_and_store(date:datetime=None):
-    """
-    Fetches event and source data for a specified date range, then stores this data in JSON files.
-    
-    This function performs several steps to gather data related to missions and their sources:
-    1. It fetches events within a specified date range from a predefined department using the ingest.get_events() function.
-    2. It enriches these events with location data by calling ingest.get_locations().
-    3. It then writes the enriched mission data to a JSON file for later use.
-    4. Similarly, it fetches source data from SharePoint using ingest.get_sources() and writes this data to another JSON file.
-    
-    Parameters:
-    - date (datetime, optional): The specific date for which to fetch and store data. If not provided, uses a default date range defined outside this function.
-    
-    Returns:
-    - None. This function does not return any value but writes data to files.
-    """
-    try:    
-        # Call ingest.get_events() to fetch events within the specified date range (PPME       in )
+def fetch_and_store(date: datetime = None, progress_callback=None):
+    current_progress = 0
+
+    try:
         missions = ingest.get_events(dateFrom, dateTo, departments=[30])
+        current_progress += 5  # 5% progress after fetching events
+        if progress_callback:
+            progress_callback(current_progress)
     except Exception:
         authenticate_to_ppme()
         missions = ingest.get_events(dateFrom, dateTo, departments=[30])
+        current_progress += 5  # Repeat increment if re-authentication and fetching events
+        if progress_callback:
+            progress_callback(current_progress)
 
-    # Call process.clean_data() to clean the missions data
     missions = process.clean_data(missions)
-    
-    # Call ingest.get_locations() to enrich missions with location data        (PPME       in )
-    missions = ingest.get_locations(missions)
+    current_progress += 5  # Increment by 5% after cleaning data
+    if progress_callback:
+        progress_callback(current_progress)
 
-    utils.save_to_txt(missions)
+    # Adjust the progress callback for get_locations to fit the 10-90% range
+    def adjusted_progress(percent):
+        nonlocal current_progress
+        # Map percent from 0-100% to 10-90% of the overall progress
+        additional_progress = 10 + (percent * 0.8)
+        if progress_callback:
+            progress_callback(additional_progress)
 
-    # Write enriched missions data to a JSON file
+    missions = ingest.get_locations(missions, adjusted_progress)
+    current_progress = 90  # After get_locations, we're at 90%
+
     with open('temp/missions.json', 'w') as file:
         json.dump(missions, file)
+    current_progress += 5  # Increment by 5% after writing missions data
+    if progress_callback:
+        progress_callback(current_progress)
 
-    # Call ingest.get_sources() to fetch source data from SharePoint           (SharePoint in )
     sources = ingest.get_sources()
-
-    # write sources to file
     with open('temp/sources.json', 'w') as file:
         json.dump(sources, file)
+    current_progress += 5  # Final 5% to complete the process
+    if progress_callback:
+        progress_callback(current_progress)
+    progress_callback(100)  # Ensure completion is signaled correctly
+
 
 def generate(date:datetime=None):
     """
