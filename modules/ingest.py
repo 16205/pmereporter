@@ -79,7 +79,7 @@ def get_events(dateFrom:datetime, dateTo:datetime=None, departments:list=None, r
     else:
         sys.exit(f"Failed to retrieve data: {response.status_code}")
 
-def get_locations(missions:list):
+def get_locations(missions:list, progress_callback=None):
     """
     Retrieves location details for each mission in the provided missions dictionary.
 
@@ -102,6 +102,9 @@ def get_locations(missions:list):
                     expired, or if any other status code indicating failure is returned.
     """
     connection_str, headers = init_ppme_api_variables()
+    # Variables for process tracking
+    total_missions = len(missions)
+    processed_count = 0
 
     # Iterate through missions
     print("Getting locations for every mission...")
@@ -131,6 +134,11 @@ def get_locations(missions:list):
             sys.exit(f"Please (re)authenticate to PlanningPME API before requesting for data. {response.status_code} Unauthorized.")
         else:
             sys.exit(f"Failed to retrieve data: {response.status_code}")
+
+        # Update processed count and emit progress
+        processed_count += 1
+        if progress_callback:
+            progress_callback(int((processed_count / total_missions) * 100))
 
     print("Got the locations!")
     return missions
