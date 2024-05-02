@@ -43,7 +43,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 self.model.appendRow(row)
 
     def fetch_data(self):
-        self.thread = Worker()  # Initialize the worker thread
+        self.thread = Worker('fetch_and_store')  # Initialize the worker thread
         self.thread.progress_updated.connect(self.update_progress)  # Connect progress update signal
         self.thread.finished.connect(self.task_finished)  # Connect the finished signal
         
@@ -76,12 +76,24 @@ class Worker(QThread):
     progress_updated = pyqtSignal(int)
     finished = pyqtSignal()
 
+    def __init__(self, task_type, *args, **kwargs):
+        super(Worker, self).__init__()
+        self.task_type = task_type
+        self.args = args
+        self.kwargs = kwargs
+
     def run(self):
-        main.fetch_and_store(progress_callback=self.handle_progress)
+        if self.task_type == 'fetch_and_store':
+            main.fetch_and_store(progress_callback=self.handle_progress, *self.args, **self.kwargs)
+        elif self.task_type == 'generate':
+            main.generate(*self.args, **self.kwargs)
+        elif self.task_type == 'send':
+            main.send(*self.args, **self.kwargs)
         self.finished.emit()
 
     def handle_progress(self, progress):
         self.progress_updated.emit(progress)
+
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
