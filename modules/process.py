@@ -60,12 +60,6 @@ def generate_pdfs(missions:dict, sources:dict):
         # Convert start and end times to datetime objects
         mission_start = datetime.strptime(mission['start'], '%Y-%m-%d %H:%M:%S')
         mission_end = datetime.strptime(mission['end'], '%Y-%m-%d %H:%M:%S')  
-        # Create directory to store generated PDFs
-        today = datetime.today().strftime("%Y%m%d")
-        if not os.path.exists(f".\generated\{today}"):
-            os.makedirs(f".\generated\{today}")
-        # Create a PDF document
-        doc = SimpleDocTemplate(f".\generated\{today}\{mission['key']}.pdf", pagesize=A4, topMargin=100)
 
         # Create content elements
         elements = []
@@ -116,7 +110,8 @@ def generate_pdfs(missions:dict, sources:dict):
 
         # -----------Location-----------
         if mission.get('location') != "Run get_locations()":
-            mission_table_data.append([Paragraph("<b>Intervention location</b>"), Paragraph(f"{mission.get('location')}")])
+            location = utils.format_text(mission.get('location'))
+            mission_table_data.append([Paragraph("<b>Intervention location</b>"), Paragraph(f"{location}")])
         else: 
             raise ValueError('Mission intervention location missing, please first run ingest.get_locations()!')
 
@@ -362,6 +357,19 @@ def generate_pdfs(missions:dict, sources:dict):
             # Add table to list of flowables
             elements.append(signatures_table)
 
+        # Create directory to store generated PDFs
+        today = datetime.today().strftime("%Y%m%d")
+        if not os.path.exists(f".\generated\{today}"):
+            os.makedirs(f".\generated\{today}")
+        
+        # Get names for file naming
+        names = ""
+        for resource in mission.get('resources'):
+            names += resource.get('lastName') + " " + resource.get('firstName') + " - "
+        
+        # Create a PDF document
+        doc = SimpleDocTemplate(f".\generated\{today}\{names}{mission.get('key')}.pdf", pagesize=A4, topMargin=100)
+        
         # Build the PDF document
         try:
             doc.build(elements, onFirstPage=add_header_footer, onLaterPages=add_header_footer)
@@ -563,13 +571,13 @@ def clean_data(missions):
             })
 
         # Populate normCr if available
-        mission_dict['normCr'] = [mission.get('fields').get('NORM_CR_1'), 
-                                   mission.get('fields').get('NORM_CR_2'), 
-                                   mission.get('fields').get('NORM_CR_3'), 
-                                   mission.get('fields').get('NORM_CR_4'), 
-                                   mission.get('fields').get('NORM_CR_5'), 
-                                   mission.get('fields').get('NORM_CR_6'), 
-                                   mission.get('fields').get('NORM_CR_7')]
+        mission_dict['normCr'] = [mission.get('fields').get('NORMCR1'), 
+                                   mission.get('fields').get('NORMCR2'), 
+                                   mission.get('fields').get('NORMCR3'), 
+                                   mission.get('fields').get('NORMCR4'), 
+                                   mission.get('fields').get('NORMCR5'), 
+                                   mission.get('fields').get('NORMCR6'), 
+                                   mission.get('fields').get('NORMCR7')]
         # Remove empty or None values
         mission_dict['normCr'] = [normCr for normCr in mission_dict['normCr'] if normCr is not None and normCr!= '']
         
