@@ -126,9 +126,14 @@ def get_locations(missions:list, min:int, max:int, progress_callback=None):
             address = place.get("address")
 
             # Handle case when information is filled out correctly by planners
-            address += f"\r\n{place.get('zip')} {place.get('city')}"
+            zip_code = place.get('zip', '')
+            city = place.get('city', '')
+            if zip_code or city:
+                address += "\r\n"
+                address += f"{(zip_code + ' ') if zip_code else ''}"
+                address += f"{city if city else ''}"
 
-            # Append locations to mission
+                # Append locations to mission
             if address:
                 mission["location"] = address
 
