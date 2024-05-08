@@ -108,15 +108,15 @@ def generate_pdfs(missions:dict, sources:dict, keys:list=None):
                                        Paragraph(client_name+client_phone1+client_phone2)])
 
         # -----------Service order number-----------
-        if mission.get('SOnumber'):
+        if mission.get('SOnumber') and mission.get('SOnumber') != 'None':
             mission_table_data.append([Paragraph("<b>Service order n°</b>"), Paragraph(f"{mission.get('SOnumber')}")])
 
         # -----------Location-----------
-        if mission.get('location') != "Run get_locations()":
+        if mission.get('location') == "Run get_locations()":
+            raise ValueError('Mission intervention location missing, please first run ingest.get_locations()!')
+        elif mission.get('location') and mission.get('location') != 'None': 
             location = utils.format_text(mission.get('location'))
             mission_table_data.append([Paragraph("<b>Intervention location</b>"), Paragraph(f"{location}")])
-        else: 
-            raise ValueError('Mission intervention location missing, please first run ingest.get_locations()!')
 
         # -----------Departure location-----------
         departureplace = mission.get('departurePlace')
@@ -361,9 +361,9 @@ def generate_pdfs(missions:dict, sources:dict, keys:list=None):
             elements.append(signatures_table)
 
         # Create directory to store generated PDFs
-        today = datetime.today().strftime("%Y%m%d")
-        if not os.path.exists(f".\generated\{today}"):
-            os.makedirs(f".\generated\{today}")
+        day_missions = mission_start.strftime('%Y%m%d')
+        if not os.path.exists(f".\generated\{day_missions}"):
+            os.makedirs(f".\generated\{day_missions}")
         
         # Get names for file naming
         names = ""
@@ -371,7 +371,7 @@ def generate_pdfs(missions:dict, sources:dict, keys:list=None):
             names += resource.get('lastName') + " " + resource.get('firstName') + " - "
         
         # Create a PDF document
-        doc = SimpleDocTemplate(f".\generated\{today}\{names}{mission.get('key')}.pdf", pagesize=A4, topMargin=100)
+        doc = SimpleDocTemplate(f".\generated\{day_missions}\{names}{mission.get('key')}.pdf", pagesize=A4, topMargin=100)
         
         # Build the PDF document
         try:
