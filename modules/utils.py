@@ -80,7 +80,7 @@ def timedelta_to_days_float(td:timedelta):
     days_float = td.days + (td.seconds/86400)
     return days_float
 
-def format_text(api_text):
+def format_text(text):
     """
     Formats the given text to be web-friendly by converting Unicode escape sequences to actual Unicode characters,
     replacing Windows line endings with HTML line breaks, and removing redundant HTML line breaks and whitespace.
@@ -98,10 +98,10 @@ def format_text(api_text):
            redundant line breaks and whitespace removed, and no <br/> tags at the beginning or end.
     """
     # Convert Unicode sequences to actual Unicode characters
-    api_text = api_text.encode('utf8').decode('utf8')
+    text = text.encode('utf8').decode('utf8')
     
     # Replace Windows line endings (\r\n) with HTML line breaks(<br/>)
-    formatted_text = api_text.replace('\r\n', '<br/>')
+    formatted_text = text.replace('\r\n', '<br/>')
 
     # Remove redundant HTML line breaks
     formatted_text = re.sub(r'(<br/>){3,}', '<br/>', formatted_text)
