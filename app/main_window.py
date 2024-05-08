@@ -1,6 +1,6 @@
 from PyQt5 import QtWidgets
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
-from PyQt5.QtCore import QThread, pyqtSignal
+from PyQt5.QtCore import QThread, pyqtSignal, Qt
 from PyQt5.QtWidgets import QProgressDialog
 import os
 import sys
@@ -19,6 +19,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.model = QStandardItemModel(self)
         self.tableView.setModel(self.model)
 
+        # Set the table view to only allow checkbox changes
+        self.tableView.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)  # Disable text editing
+        self.tableView.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)  # Enable row selection
+
         # Connect buttons to functions
         self.pushButton_2.clicked.connect(self.fetch_data)
         self.pushButton.clicked.connect(self.generate_mission_orders)
@@ -34,13 +38,46 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
         # Assuming JSON data is a list of dictionaries
         if data:
-            # Set column headers using keys from the first dictionary, if present
-            self.model.setHorizontalHeaderLabels(data[0].keys())
+            # Set column headers
+            headers = ['Select', 'Agents', 'Date & time', 'Customer', 'SO n°', 'Intervention n°', 'Departure From', 'Location']
+            self.model.setHorizontalHeaderLabels(headers)
 
             # Populate the rows of the table
             for item in data:
-                row = [QStandardItem(str(value)) for value in item.values()]
+                row = []
+                # Create a checkbox item
+                checkbox_item = QStandardItem()
+                checkbox_item.setCheckable(True)
+                checkbox_item.setCheckState(Qt.Checked)
+                row.append(checkbox_item)
+
+                # Append other data
+                resource_names = ""
+                for resource in item.get('resources'):
+                    resource_names += f"{resource.get('lastName')} {resource.get('firstName')}\n"
+                row.extend([
+                    QStandardItem(resource_names),
+                    QStandardItem(item.get('start')),
+                    QStandardItem(item.get('customers')[0].get('label')),
+                    QStandardItem(item.get('SOnumber')),
+                    QStandardItem(item.get('key')),
+                    QStandardItem(item.get('departurePlace')),
+                    QStandardItem(item.get('location'))
+                ])
                 self.model.appendRow(row)
+        
+        # Autosize columns and rows
+        self.tableView.resizeColumnsToContents()
+        self.tableView.resizeRowsToContents()
+
+    def get_selected_items(self):
+        selected_items = []
+        for row in range(self.model.rowCount()):
+            if self.model.item(row, 0).checkState() == Qt.Checked:
+                mission_key = self.model.item(row, 5).text()  # Assuming the mission key is in the sixth column
+                selected_items.append(mission_key)
+        return selected_items
+
 
     def fetch_data(self):
         self.thread = Worker('fetch_and_store')  # Initialize the worker thread
@@ -49,6 +86,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         
         # Initialize and display the progress dialog
         self.progress_dialog = QProgressDialog("Fetching data...", "Cancel", 0, 100, self)
+        self.progress_dialog.setWindowTitle("Fetching data...")
         self.progress_dialog.setModal(True)
         self.progress_dialog.setAutoClose(True)
         
@@ -65,8 +103,18 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.load_data_to_table("./temp/missions.json")
 
     def generate_mission_orders(self):
-        print("Generating mission orders...")
-        main.generate()
+        self.thread = Worker('generate')  # Initialize the worker thread
+        self.thread.progress_updated.connect(self.update_progress)  # Connect progress update signal
+        self.thread.finished.connect(self.task_finished)  # Connect the finished signal
+        
+        # Initialize and display the progress dialog
+        self.progress_dialog = QProgressDialog("Generating pdfs...", "Cancel", 0, 100, self)
+        self.progress_dialog.setModal(True)
+        self.progress_dialog.setAutoClose(True)
+        
+        self.thread.start()  # Start the thread
+        if self.progress_dialog.exec_() == QProgressDialog.Rejected:
+            self.thread.terminate()  # Stop the thread if the dialog is canceled
 
     def send_mission_orders(self):
         print("Sending mission orders...")
@@ -93,7 +141,6 @@ class Worker(QThread):
 
     def handle_progress(self, progress):
         self.progress_updated.emit(progress)
-
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
