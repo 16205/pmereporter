@@ -7,39 +7,106 @@
 
 
 from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtCore import QDate
 
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(1120, 909)
+        MainWindow.setWindowTitle("PMEReporter")
+        MainWindow.setWindowIcon(QtGui.QIcon('media\icon.png'))
+        
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
-        self.verticalLayout = QtWidgets.QVBoxLayout(self.centralwidget)  # Using QVBoxLayout for simplicity
-        self.tableView = QtWidgets.QTableView(self.centralwidget)
-        self.tableView.setObjectName("tableView")
-        self.verticalLayout.addWidget(self.tableView)
+
+        # ------------------ Main horizontal layout ------------------
+        self.mainHorizontalLayout = QtWidgets.QHBoxLayout(self.centralwidget)
+
+        # ------------------ Left side vertical layout ------------------
+        self.leftVerticalLayout = QtWidgets.QVBoxLayout()
+        self.titleLabel = QtWidgets.QLabel("Mission orders overview")
+        self.titleLabel.setFont(QtGui.QFont("Arial", 12))
+        self.leftVerticalLayout.addWidget(self.titleLabel)
+
+        # ------------------ Missions tableView ------------------
+        self.missionTableView = QtWidgets.QTableView(self.centralwidget)
+        self.missionTableView.setObjectName("Mission orders")
+        self.leftVerticalLayout.addWidget(self.missionTableView)
 
         self.horizontalLayout = QtWidgets.QHBoxLayout()
-        self.pushButton_2 = QtWidgets.QPushButton("Fetch data")
-        self.pushButton = QtWidgets.QPushButton("Generate mission orders")
-        self.pushButton_3 = QtWidgets.QPushButton("Send mission orders")
-        self.horizontalLayout.addWidget(self.pushButton_2)
-        self.horizontalLayout.addWidget(self.pushButton)
-        self.horizontalLayout.addWidget(self.pushButton_3)
-        self.verticalLayout.addLayout(self.horizontalLayout)
+        self.genButton = QtWidgets.QPushButton("Generate mission orders")
+        self.sendButton = QtWidgets.QPushButton("Send mission orders")
+        self.horizontalLayout.addWidget(self.genButton)
+        self.horizontalLayout.addWidget(self.sendButton)
+        self.leftVerticalLayout.addLayout(self.horizontalLayout)
+
+        # ------------------ Right side vertical layout ------------------
+        self.rightVerticalLayout = QtWidgets.QVBoxLayout()
+        self.titleLabel = QtWidgets.QLabel("Filters")
+        self.titleLabel.setFont(QtGui.QFont("Arial", 12))
+        self.rightVerticalLayout.addWidget(self.titleLabel)
+
+        # ------------------ Date filter section ------------------
+        self.dateSelectorVerticalLayout = QtWidgets.QVBoxLayout()
+        self.titleLabel = QtWidgets.QLabel("Date selection")
+        self.titleLabel.setFont(QtGui.QFont("Arial", 8))
+        self.dateSelectorVerticalLayout.addWidget(self.titleLabel)
+        # Date selector
+        self.dateSelectorHorizontalLayout = QtWidgets.QHBoxLayout()
+        self.dateSelector = QtWidgets.QDateEdit()
+        self.dateSelector.setCalendarPopup(True)
+        self.dateSelector.setDate(QDate.currentDate().addDays(1))
+        self.dateSelectorHorizontalLayout.addWidget(self.dateSelector, 1)
+        # Buttons for setting dates
+        self.tomorrowButton = QtWidgets.QPushButton("Tomorrow")
+        self.nextMondayButton = QtWidgets.QPushButton("Next Monday")
+        self.tomorrowButton.clicked.connect(self.setTomorrow)
+        self.nextMondayButton.clicked.connect(self.setNextMonday)
+        self.dateSelectorHorizontalLayout.addWidget(self.tomorrowButton, 1)
+        self.dateSelectorHorizontalLayout.addWidget(self.nextMondayButton, 1)
+        # Add dateSelectorLayout to rightVerticalLayout
+        self.dateSelectorVerticalLayout.addLayout(self.dateSelectorHorizontalLayout)
+        self.rightVerticalLayout.addLayout(self.dateSelectorVerticalLayout)
+
+        # ------------------ Department tableView filter ------------------
+        self.departmentVerticalLayout = QtWidgets.QVBoxLayout()
+        self.titleLabel = QtWidgets.QLabel("Department selection")
+        self.titleLabel.setFont(QtGui.QFont("Arial", 8))
+        self.departmentVerticalLayout.addWidget(self.titleLabel)
+        # Department tableView selector
+        self.departmentTableView = QtWidgets.QTableView()
+        self.departmentVerticalLayout.addWidget(self.departmentTableView)
+        self.rightVerticalLayout.addLayout(self.departmentVerticalLayout)
+
+        self.fetchButton = QtWidgets.QPushButton("Fetch data")
+        self.rightVerticalLayout.addWidget(self.fetchButton)
+
+        # Add both left and right layouts to the main layout
+        self.mainHorizontalLayout.addLayout(self.leftVerticalLayout, 3) # 75% of space
+        self.mainHorizontalLayout.addLayout(self.rightVerticalLayout, 1) # 25% of space
 
         MainWindow.setCentralWidget(self.centralwidget)
         self.statusbar = QtWidgets.QStatusBar(MainWindow)
         MainWindow.setStatusBar(self.statusbar)
 
+    def setTomorrow(self):
+        self.dateSelector.setDate(QDate.currentDate().addDays(1))
+
+    def setNextMonday(self):
+        today = QDate.currentDate()
+        # Calculate the number of days until next Monday
+        days_to_monday = (7 - today.dayOfWeek() + 1) % 7
+        if days_to_monday == 0:
+            days_to_monday = 7  # If today is Monday, set next Monday (7 days ahead)
+        self.dateSelector.setDate(today.addDays(days_to_monday))
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
-        self.pushButton_2.setText(_translate("MainWindow", "Fetch data"))
-        self.pushButton.setText(_translate("MainWindow", "Generate mission orders"))
-        self.pushButton_3.setText(_translate("MainWindow", "Send mission orders"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "PMEReporter"))
+        self.fetchButton.setText(_translate("MainWindow", "Fetch data"))
+        self.genButton.setText(_translate("MainWindow", "Generate mission orders"))
+        self.sendButton.setText(_translate("MainWindow", "Send mission orders"))
 
 
 if __name__ == "__main__":
