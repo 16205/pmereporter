@@ -27,7 +27,7 @@ def init_ppme_api_variables():
     return connection_str, headers
 
 def get_events(dateFrom:datetime, dateTo:datetime=None, departments:list=None, resources:list=None, 
-               categories:list=[52,60,63,65,78,80]):
+               categories:list=[52,60,63,65,80]):
     """
     Fetches events from the PlanningPME API within a specified date range and optional filters.
 
@@ -40,7 +40,8 @@ def get_events(dateFrom:datetime, dateTo:datetime=None, departments:list=None, r
         dateTo (datetime, optional): The end date for the event search. Defaults to None, which will be interpreted as dateFrom.
         departments (list, optional): A list of department IDs to filter events. Defaults to None.
         resources (list, optional): A list of resource IDs to filter events. Defaults to None.
-        categories (list, optional): A list of category IDs to filter events. Defaults to [52,60,63,65,78,80].
+        categories (list, optional): A list of category IDs to filter events. Defaults to [52,60,63,65,80], which corresponds respectively to
+                                                                                [Planned, Planned Nucleair, Niet factureerbaar, Opleiding-Formation, Prime Time].
 
     Returns:
         dict: A dictionary containing the response from the PlanningPME API, including a list of events that match the criteria.
@@ -204,3 +205,31 @@ def get_categories():
     response = requests.get(connection_str + 'category', headers=headers)
 
     return response
+
+def get_sent_elements(access_token:str):
+    # URL to access the Sent Items folder
+    url = "https://graph.microsoft.com/v1.0/me/mailFolders/sentItems/messages?$select=subject,receivedDateTime,toRecipients"
+
+    # Set the header with the authorization token
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json"
+    }
+
+    # Make the GET request
+    response = requests.get(url, headers=headers)
+
+    # Check if the request was successful
+    if response.status_code == 200:
+        # Parse the JSON data from the response
+        data = response.json()
+        # Print out the subject, time sent, and recipient of each email in the Sent Items folder
+        elements = []
+        for message in data.get('value', []):
+            subject = message['subject']
+            sent_time = message['receivedDateTime']
+            recipients = ', '.join([recipient['emailAddress']['address'] for recipient in message['toRecipients']])
+            elements.append({'recipients': recipients, 'subject': subject, 'sent_time': sent_time})
+        return elements
+    else:
+        print("Failed to retrieve data:", response.status_code)
