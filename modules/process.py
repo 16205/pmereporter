@@ -37,7 +37,7 @@ def get_resources_from_departments(departments):
 # to generate PDF documents based on the missions and sources data, so that platypus usage for layout is
 # separated from data structuring jobs.
 
-def generate_pdfs(missions:dict, sources:dict):
+def generate_pdfs(missions:dict, sources:dict, keys:list=None):
     """
     Generates PDF documents for each mission in the provided missions list, including ADR information and other mission details.
 
@@ -56,7 +56,10 @@ def generate_pdfs(missions:dict, sources:dict):
     styles.add(ParagraphStyle(name='Justify', parent=styles['Normal'], fontSize=10, fontName='Helvetica', alignment=TA_JUSTIFY,))
     smaller_font_style = ParagraphStyle('SmallerFont', parent=styles['Normal'], fontSize=9, fontName='Helvetica')
 
-    for mission in tqdm(missions):     
+    for mission in tqdm(missions):
+        # Skip missions that have a key in "keys" input argument list (That is, missions not selected to be generated in GUI)
+        if keys and mission.get('key') not in keys:
+            continue
         # Convert start and end times to datetime objects
         mission_start = datetime.strptime(mission['start'], '%Y-%m-%d %H:%M:%S')
         mission_end = datetime.strptime(mission['end'], '%Y-%m-%d %H:%M:%S')  
@@ -513,13 +516,13 @@ def clean_data(missions):
     for mission in missions['items']:
         # Initialize each mission with defaults
         mission_dict = {
-            "key": mission.get('key'),
+            "key": str(mission.get('key')),
             "resources": [],
             "start": str(datetime.strptime(mission.get('start'), "%Y-%m-%dT%H:%M:%S")),
             "end": str(datetime.strptime(mission.get('end'), "%Y-%m-%dT%H:%M:%S")),
             "comments": [],
             "customers": [],
-            "SOnumber": mission.get('project').get('fields').get('PROJET_SO_NUMBER'),
+            "SOnumber": str(mission.get('project').get('fields').get('PROJET_SO_NUMBER')),
             "departurePlace": mission.get('fields').get('DEPARTUREPLACE') if mission.get('fields').get('DEPARTUREPLACE') != '' else None,
             "normCr": [],
             "sources": [],
@@ -556,7 +559,7 @@ def clean_data(missions):
         # Populate comments if available
         mission_dict['comments'] = [mission.get('fields').get('COMMENTS_LOCATION'), 
                                     mission.get('remark'), 
-                                    mission.get('fields').get('TASKCOMMENTS'), 
+                                    # mission.get('fields').get('TASKCOMMENTS'), 
                                     mission.get('customers')[0].get('fields').get('COMMENTSCUSTOMER')]
         # Remove empty or None values
         mission_dict['comments'] = [comment for comment in mission_dict['comments'] if comment is not None and comment!= '']

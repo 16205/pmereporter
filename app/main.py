@@ -3,7 +3,7 @@ import json
 import os
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from modules import ingest, process, utils
+from modules import ingest, process
 from modules.auth import authenticate_to_ppme
 
 dateFrom = datetime(2023, 11, 21)
@@ -54,7 +54,7 @@ def fetch_and_store(date: datetime = None, progress_callback=None):
         progress_callback(100)  # Ensure completion is signaled correctly
 
 
-def generate(date:datetime=None):
+def generate(keys:list[str]):
     """
     Generates PDFs based on the missions and sources data stored in JSON files.
     
@@ -85,13 +85,13 @@ def generate(date:datetime=None):
         print("\n")
 
     # Feed data into process.generate_pdfs() to generate PDF documents containing the missions details
-    process.generate_pdfs(missions, sources)    
+    process.generate_pdfs(missions, sources, keys)    
 
 def send():
     with open('temp/missions.json', 'r') as file:
         missions = json.load(file)
     process.send_om(missions, datetime.today())
 
-fetch_and_store()
-generate()
+# fetch_and_store()
+# generate()
 # send()
