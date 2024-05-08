@@ -97,34 +97,35 @@ def format_text(text):
     - str: The formatted text, with Unicode characters properly displayed, Windows line endings replaced by HTML line breaks,
            redundant line breaks and whitespace removed, and no <br/> tags at the beginning or end.
     """
-    # Convert Unicode sequences to actual Unicode characters
-    text = text.encode('utf8').decode('utf8')
-    
-    # Replace Windows line endings (\r\n) with HTML line breaks(<br/>)
-    formatted_text = text.replace('\r\n', '<br/>')
+    if text:
+        # Convert Unicode sequences to actual Unicode characters
+        text = text.encode('utf8').decode('utf8')
+        
+        # Replace Windows line endings (\r\n) with HTML line breaks(<br/>)
+        formatted_text = text.replace('\r\n', '<br/>')
 
-    # Remove redundant HTML line breaks
-    formatted_text = re.sub(r'(<br/>){3,}', '<br/>', formatted_text)
-    
-    # Strip leading and trailing whitespace and newlines
-    formatted_text = formatted_text.strip()
-    
-    # Remove <br/> tags from the beginning and end of the text
-    formatted_text = re.sub(r'^<br/>|<br/>$', '', formatted_text)
-    
-    # Strip leading and trailing whitespace and newlines
-    formatted_text = formatted_text.strip()
+        # Remove redundant HTML line breaks
+        formatted_text = re.sub(r'(<br/>){3,}', '<br/>', formatted_text)
+        
+        # Strip leading and trailing whitespace and newlines
+        formatted_text = formatted_text.strip()
+        
+        # Remove <br/> tags from the beginning and end of the text
+        formatted_text = re.sub(r'^<br/>|<br/>$', '', formatted_text)
+        
+        # Strip leading and trailing whitespace and newlines
+        formatted_text = formatted_text.strip()
 
-    # Remove <br/> tags from the beginning and end of the text
-    formatted_text = re.sub(r'^<br/>|<br/>$', '', formatted_text)
-    
-    # Strip leading and trailing whitespace and newlines
-    formatted_text = formatted_text.strip()
+        # Remove <br/> tags from the beginning and end of the text
+        formatted_text = re.sub(r'^<br/>|<br/>$', '', formatted_text)
+        
+        # Strip leading and trailing whitespace and newlines
+        formatted_text = formatted_text.strip()
 
-    # Remove <br/> tags from the beginning and end of the text
-    formatted_text = re.sub(r'^<br/>|<br/>$', '', formatted_text)
-            
-    return formatted_text
+        # Remove <br/> tags from the beginning and end of the text
+        formatted_text = re.sub(r'^<br/>|<br/>$', '', formatted_text)
+                
+        return formatted_text
 
 def calculate_paragraph_height(text, width, style):
     """
