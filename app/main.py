@@ -29,15 +29,14 @@ def fetch_and_store(date: datetime = None, progress_callback=None):
     if progress_callback:
         progress_callback(current_progress)
 
-    # Adjust the progress callback for get_locations to fit the 10-90% range
-    def adjusted_progress(percent):
-        nonlocal current_progress
-        # Map percent from 0-100% to 10-90% of the overall progress
-        additional_progress = 10 + (percent * 0.8)
+    # Adjust the progress callback to fit the specified min-max% range
+    def adjusted_progress(inner_progress, min, max):
+        # Map inner_progress from 0-100% to min-max% of the overall progress
+        mapped_progress = int(min + (float(inner_progress) * (max-min)))
         if progress_callback:
-            progress_callback(additional_progress)
+            progress_callback(mapped_progress)
 
-    missions = ingest.get_locations(missions, adjusted_progress)
+    missions = ingest.get_locations(missions, 10, 90, adjusted_progress)
     current_progress = 90  # After get_locations, we're at 90%
 
     with open('temp/missions.json', 'w') as file:
@@ -51,8 +50,8 @@ def fetch_and_store(date: datetime = None, progress_callback=None):
         json.dump(sources, file)
     current_progress += 5  # Final 5% to complete the process
     if progress_callback:
-        progress_callback(current_progress)
-    progress_callback(100)  # Ensure completion is signaled correctly
+        # progress_callback(current_progress)
+        progress_callback(100)  # Ensure completion is signaled correctly
 
 
 def generate(date:datetime=None):
@@ -93,6 +92,6 @@ def send():
         missions = json.load(file)
     process.send_om(missions, datetime.today())
 
-# fetch_and_store()
-# generate()
+fetch_and_store()
+generate()
 # send()
