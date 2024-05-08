@@ -15,10 +15,10 @@ class Ui_MainWindow(object):
         MainWindow.resize(1120, 909)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
-        self.layout = QtWidgets.QVBoxLayout(self.centralwidget)  # Using QVBoxLayout for simplicity
+        self.verticalLayout = QtWidgets.QVBoxLayout(self.centralwidget)  # Using QVBoxLayout for simplicity
         self.tableView = QtWidgets.QTableView(self.centralwidget)
         self.tableView.setObjectName("tableView")
-        self.layout.addWidget(self.tableView)
+        self.verticalLayout.addWidget(self.tableView)
 
         self.horizontalLayout = QtWidgets.QHBoxLayout()
         self.pushButton_2 = QtWidgets.QPushButton("Fetch data")
@@ -27,7 +27,7 @@ class Ui_MainWindow(object):
         self.horizontalLayout.addWidget(self.pushButton_2)
         self.horizontalLayout.addWidget(self.pushButton)
         self.horizontalLayout.addWidget(self.pushButton_3)
-        self.layout.addLayout(self.horizontalLayout)
+        self.verticalLayout.addLayout(self.horizontalLayout)
 
         MainWindow.setCentralWidget(self.centralwidget)
         self.statusbar = QtWidgets.QStatusBar(MainWindow)
