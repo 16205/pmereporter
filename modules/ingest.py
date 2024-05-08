@@ -79,28 +79,30 @@ def get_events(dateFrom:datetime, dateTo:datetime=None, departments:list=None, r
     else:
         sys.exit(f"Failed to retrieve data: {response.status_code}")
 
-def get_locations(missions:list, progress_callback=None):
+def get_locations(missions:list, min:int, max:int, progress_callback=None):
     """
-    Retrieves location details for each mission in the provided missions dictionary.
+    Retrieves and appends location information for each mission in the provided list.
 
-    This function iterates over each mission in the 'missions' dictionary, queries the PlanningPME API for detailed
-    information about the mission, and extracts the location details from the response. It appends the location
-    information to each mission in the dictionary. If the API call is successful, the location is formatted and
-    added to the mission. If the API returns a 401 Unauthorized status, the program exits with an error message
-    indicating the need for re-authentication. For any other error status code, the program also exits with a
-    failure message.
+    This function iterates through a list of missions, querying an API for each mission's details to extract
+    and append location information. It supports updating a progress callback function to notify about the
+    progress of location retrieval.
 
     Parameters:
-        missions (dict): A dictionary containing missions, where each mission is expected to have a 'key' that
-                         serves as the mission ID for API queries.
+        missions (list): A list of dictionaries, each representing a mission with at least a "key" for the mission ID.
+        min (int): The minimum value of the progress range, used in the progress callback.
+        max (int): The maximum value of the progress range, used in the progress callback.
+        progress_callback (function, optional): A callback function that accepts three arguments: the current progress,
+                                                 the minimum, and the maximum values of the progress range. This function
+                                                 is called after each mission's location information is retrieved.
 
     Returns:
-        dict: The updated missions dictionary with location details appended to each mission.
+        list: The input list of missions, with location information appended to each mission dictionary.
 
     Raises:
-        SystemExit: If the API returns a 401 Unauthorized status, indicating that the bearer token is invalid or
-                    expired, or if any other status code indicating failure is returned.
+        SystemExit: If the API returns a 401 Unauthorized status code, indicating that the bearer token is invalid or expired,
+                    or if the API returns any other status code indicating failure.
     """
+    
     connection_str, headers = init_ppme_api_variables()
     # Variables for process tracking
     total_missions = len(missions)
@@ -124,7 +126,7 @@ def get_locations(missions:list, progress_callback=None):
             address = place.get("address")
 
             # Handle case when information is filled out correctly by planners
-            address += f"<br/>{place.get('zip')} {place.get('city')}"
+            address += f"\r\n{place.get('zip')} {place.get('city')}"
 
             # Append locations to mission
             if address:
@@ -137,8 +139,9 @@ def get_locations(missions:list, progress_callback=None):
 
         # Update processed count and emit progress
         processed_count += 1
+        progress = processed_count / total_missions
         if progress_callback:
-            progress_callback(int((processed_count / total_missions) * 100))
+            progress_callback(progress, min, max)
 
     print("Got the locations!")
     return missions
