@@ -2,9 +2,10 @@ from PyQt5 import QtWidgets
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
 from PyQt5.QtCore import QThread, pyqtSignal, Qt
 from PyQt5.QtWidgets import QProgressDialog
-import os
-import sys
 import json
+import os
+import shutil
+import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from ui.ui_main_window import Ui_MainWindow
 import main
@@ -23,6 +24,21 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.genButton.clicked.connect(self.generate_mission_orders)
         self.sendButton.clicked.connect(self.send_mission_orders)
 
+    def closeEvent(self, event):
+        # Call your cleanup function here
+        self.cleanUpFolders()
+        super().closeEvent(event)
+
+    def cleanUpFolders(self):
+        # Example: Clearing a temporary folder on close
+        temp_folder = './temp'
+        try:
+            if os.path.exists(temp_folder):
+                shutil.rmtree(temp_folder)
+                print("Temporary files deleted.")
+        except Exception as e:
+            print(f"Error deleting temporary files: {e}")
+
     def setupTable(self):
         # Initialize the model for tableView
         self.model = QStandardItemModel(self)
@@ -36,6 +52,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.headers = ['Select', 'Agents', 'Date & time', 'Customer', 'SO n°', 'Intervention n°', 'Departure From', 'Location', 'RT Sources']
         self.model.setHorizontalHeaderLabels(self.headers)
 
+    # ------------------ Functions that interact with the GUI ------------------
+
     def load_data_to_table(self, file_path):
         # Clear existing data from the model
         self.model.clear()
@@ -44,12 +62,12 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         with open(file_path, 'r') as file:
             data = json.load(file)
 
-        # Assuming JSON data is a list of dictionaries
-        if data:
-            # Set column headers
+        # Set column headers
             headers = self.headers
             self.model.setHorizontalHeaderLabels(headers) 
 
+        # Assuming JSON data is a list of dictionaries
+        if data:
             # Populate the rows of the table
             for item in data:
                 row = []
@@ -59,9 +77,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 checkbox_item.setCheckState(Qt.Checked)
                 row.append(checkbox_item)
                 # Append other data
-                resource_names = ""
-                for resource in item.get('resources'):
-                    resource_names += f"{resource.get('lastName')} {resource.get('firstName')}\n"
+                resource_names = "\n".join(f"{resource['lastName']} {resource['firstName']}" for resource in item.get('resources'))
                 sources = ""
                 for source in item.get('sources'):
                     sources += f"{source}\n"
@@ -75,11 +91,16 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                     QStandardItem(item.get('location')),
                     QStandardItem(sources)
                 ])
+                # Set vertical alignment for all items in the row
+                for cell in row:
+                    cell.setTextAlignment(Qt.AlignVCenter | Qt.AlignLeft)
                 self.model.appendRow(row)
                 
-        # Autosize columns and rows
-        self.missionTableView.resizeColumnsToContents()
-        self.missionTableView.resizeRowsToContents()
+            # Resize columns and rows
+            self.missionTableView.resizeColumnsToContents()
+            for row in range(self.model.rowCount()):
+                self.missionTableView.setRowHeight(row, 50)
+
 
     def get_selected_items(self):
         selected_items = []
@@ -88,6 +109,20 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 mission_key = self.model.item(row, 5).text()  # Assuming the mission key is in the sixth column
                 selected_items.append(mission_key)
         return selected_items
+
+    # ------------------ Functions related to the worker call ------------------
+
+    def start_thread(self, task_type, message, *args):
+        self.thread = Worker(task_type, *args)  # Initialize the worker thread
+        self.thread.progress_updated.connect(self.update_progress)  # Connect progress update signal
+        self.thread.finished.connect(self.task_finished)  # Connect the finished signal
+        self.progress_dialog = QProgressDialog(f"Please wait, {message.lower()}...", "Cancel", 0, 100, self)
+        self.progress_dialog.setWindowTitle(f"{message}")
+        self.progress_dialog.setModal(True)
+        self.progress_dialog.setAutoClose(True)
+        self.thread.start()  # Start the thread
+        if self.progress_dialog.exec_() == QProgressDialog.Rejected:
+            self.thread.terminate()  # Stop the thread if the dialog is canceled
 
     def update_progress(self, value):
         self.progress_dialog.setValue(value)
@@ -102,22 +137,16 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.current_task = None  # Reset current task
         self.message = None # Clear message
 
-    def start_thread(self, task_type, message, *args):
-        self.thread = Worker(task_type, *args)  # Initialize the worker thread
-        self.thread.progress_updated.connect(self.update_progress)  # Connect progress update signal
-        self.thread.finished.connect(self.task_finished)  # Connect the finished signal
-        self.progress_dialog = QProgressDialog(f"Please wait, {message.lower()}...", "Cancel", 0, 100, self)
-        self.progress_dialog.setWindowTitle(f"{message}")
-        self.progress_dialog.setModal(True)
-        self.progress_dialog.setAutoClose(True)
-        self.thread.start()  # Start the thread
-        if self.progress_dialog.exec_() == QProgressDialog.Rejected:
-            self.thread.terminate()  # Stop the thread if the dialog is canceled
+    # ------------------ Functions linked to buttons ------------------
 
     def fetch_data(self):
+        # Get the date from the dateSelector
+        selected_date = self.dateSelector.date().toPyDate()  # Converts QDate to Python date
+
         self.current_task = 'fetch_and_store'  # Set the current task
         self.message = 'Data loading'
-        self.start_thread(self.current_task, self.message)
+
+        self.start_thread(self.current_task, self.message, selected_date)
 
     def generate_mission_orders(self):
         selected_keys = self.get_selected_items()
@@ -129,14 +158,20 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.start_thread(self.current_task, self.message, selected_keys)
 
     def send_mission_orders(self):
+        selected_keys = self.get_selected_items()
+        if not selected_keys:
+            QtWidgets.QMessageBox.warning(self, "No Selection", "Please select at least one mission order to send.")
+            return
         self.current_task = 'send'  # Set the current task
         self.message = 'Mission orders sending'
-        self.start_thread(self.current_task, self.message)
+        self.start_thread(self.current_task, self.message, selected_keys)
 
     def check_source_conflicts(self):
         self.current_task = 'check_sources_conflicts'
         self.message = 'Source conflicts'
         self.start_thread(self.current_task, self.message)
+
+# ------------------ Worker object ------------------
 
 class Worker(QThread):
     progress_updated = pyqtSignal(int)
@@ -150,11 +185,11 @@ class Worker(QThread):
 
     def run(self):
         if self.task_type == 'fetch_and_store':
-            main.fetch_and_store(progress_callback=self.handle_progress, *self.args, **self.kwargs)
+            main.fetch_and_store(*self.args, progress_callback=self.handle_progress, **self.kwargs)
         elif self.task_type == 'generate':
             main.generate(*self.args, **self.kwargs)
         elif self.task_type == 'send':
-            main.send(*self.args, **self.kwargs)
+            main.send(*self.args, progress_callback=self.handle_progress, **self.kwargs)
         elif self.task_type == 'check_sources_conflicts':
             main.check_sources_conflicts(*self.args, **self.kwargs)
         self.finished.emit()
