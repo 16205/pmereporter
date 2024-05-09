@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, time
 import json
 import os
 import sys
@@ -6,11 +6,16 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from modules import ingest, process
 from modules.auth import authenticate_to_ppme
 
-dateFrom = datetime(2023, 11, 21)
-dateTo = datetime(2023, 11, 21, 23, 59, 59, 999)
+dateFrom = datetime(2023, 12, 14)
+# dateTo = datetime(2023, 11, 21, 23, 59, 59, 999)
 
-def fetch_and_store(date: datetime = None, progress_callback=None):
+def fetch_and_store(date:datetime = None, departments:list=None, progress_callback=None):
     current_progress = 0
+    if progress_callback:
+        progress_callback(current_progress)  # Start with 0% progress
+
+    dateFrom = date
+    dateTo = datetime.combine(dateFrom, time(23, 59, 59, 999))
 
     try:
         missions = ingest.get_events(dateFrom, dateTo, departments=[30])
@@ -87,11 +92,17 @@ def generate(keys:list[str]):
     # Feed data into process.generate_pdfs() to generate PDF documents containing the missions details
     process.generate_pdfs(missions, sources, keys)    
 
-def send():
+def send(keys:list[str], progress_callback=None):
+    if progress_callback:
+        progress_callback(0)  # Start with 0% progress
+
     with open('temp/missions.json', 'r') as file:
         missions = json.load(file)
-    process.send_om(missions, datetime.today())
+    process.send_om(missions, keys, progress_callback)
 
-# fetch_and_store()
-# generate()
-# send()
+    if progress_callback:
+        progress_callback(100)  # Ensure completion is signaled correctly
+
+# fetch_and_store(dateFrom)
+# generate(None)
+# send(None)
