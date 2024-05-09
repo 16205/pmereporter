@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from modules import auth
 from tqdm import tqdm
@@ -207,8 +207,12 @@ def get_categories():
     return response
 
 def get_sent_elements(access_token:str):
+    start_date = datetime.today() - timedelta(days=7)
+    start_date_str = start_date.strftime('%Y-%m-%dT%H:%M:%SZ')  # Format date in ISO 8601
+
+    
     # URL to access the Sent Items folder
-    url = "https://graph.microsoft.com/v1.0/me/mailFolders/sentItems/messages?$select=subject,receivedDateTime,toRecipients"
+    url = f"https://graph.microsoft.com/v1.0/me/mailFolders/sentItems/messages?$select=subject,receivedDateTime,toRecipients&$filter=receivedDateTime ge {start_date_str}&$orderby=receivedDateTime desc&$top=200"
 
     # Set the header with the authorization token
     headers = {
@@ -233,3 +237,5 @@ def get_sent_elements(access_token:str):
         return elements
     else:
         print("Failed to retrieve data:", response.status_code)
+
+# get_sent_elements(os.environ['MS_ACCESS_TOKEN'])
