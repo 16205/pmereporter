@@ -137,14 +137,17 @@ def generate_pdfs(missions:dict, sources:dict, keys:list=None):
         comments_paragraph = []
         max_height = 500
         max_width = 320
-        actual_height = utils.calculate_paragraph_height(comments_text, max_width, styles['Normal'])
+        # actual_height = utils.calculate_paragraph_height(comments_text, max_width, styles['Normal'])
 
         # Checking if height > max height to avoid running 'ajust_paragraph_height' if not needed
-        if actual_height > max_height:
-            # Split total comments text into two paragraphs if height > max height
-            comments_paragraph = utils.ajust_paragraph_height(comments_text, max_height, max_width, styles['Normal'])
-        else:
-            comments_paragraph.append(comments_text)
+        # if actual_height > max_height:
+        #     # Split total comments text into two paragraphs if height > max height
+        #     comments_paragraph = utils.ajust_paragraph_height(comments_text, max_height, max_width, styles['Normal'])
+        # else:
+        #     comments_paragraph.append(comments_text)
+
+        # Split total comments text into two paragraphs if height > max height
+        comments_paragraph = utils.ajust_paragraph_height(comments_text, max_height, max_width, styles['Normal'])
 
         # Print one paragraph per table row
         for comment in comments_paragraph:
@@ -477,30 +480,45 @@ def check_sources_double_bookings(missions: list) -> dict:
 
     return double_bookings
 
-def send_om(missions, date):
+def send_om(missions:dict, keys:list[str], progress_callback=None):
     load_dotenv(override=True)
     access_token = os.environ.get('MS_ACCESS_TOKEN')
     print("Sending mission orders...")
+
+    # Variables for process tracking
+    total_missions = len(missions)
+    processed_count = 0
+
     # Iterate over all missions
-    for mission in tqdm(missions['items']):
+    for mission in tqdm(missions):
+        # Skip missions that have a key in "keys" input argument list (That is, missions not selected to be generated in GUI)
+        if keys and mission.get('key') not in keys:
+            continue
         # Initialize empty list of recipients
         recipients = []
+        # For finding files via filename
+        names = ""
         # Iterate over all mission resources
         for resource in mission.get('resources'):
             recipients.append(resource.get('email'))
+            names += f"{resource.get('lastName')} {resource.get('firstName')} - "
         # Remove any empty or None values
         recipients = [r for r in recipients if r and r != '']
         number = mission.get('key')
-        intervention_date = (mission['start'], "%Y-%m-%dT%H:%M:%S").strftime('%d/%m/%Y')
+        mission_start = datetime.strptime(mission['start'], '%Y-%m-%d %H:%M:%S')
+        intervention_date = mission_start.strftime('%d/%m/%Y')
         content = f"Please find in attachment the Intervention Document (Nr: {number})\n\n"
-        attachment_path = f"./generated/{date.strftime('%Y%m%d')}/{number}.pdf"
+            
+        attachment_path = f"./generated/{mission_start.strftime('%Y%m%d')}/{names}{number}.pdf"
+        
         # recipients_str is for development purposes
         recipients_str = "["
         for recipient in recipients:
             recipients_str += recipient + ",\n"
         recipients_str += "]"
+        
         try: 
-            outbound.send_email(access_token, f"Mission order n°{number} - {intervention_date}", ['glohest@vincotte.be', 'gabriellohest@gmail.com'], content+recipients_str, attachment_path)
+            outbound.send_email(access_token, f"Mission order n°{number} - {intervention_date}", ['glohest@vincotte.be'], content+recipients_str, attachment_path)
         except ValueError:
             try:
                 access_token = auth.refresh_access_token()
@@ -508,6 +526,14 @@ def send_om(missions, date):
             except ValueError:
                 access_token = auth.authenticate_to_ms_graph()
                 outbound.send_email(access_token, f"Mission order n°{number} - {intervention_date}", ['glohest@vincotte.be'], content+recipients_str, attachment_path)
+        
+        # Update processed count and emit progress
+        processed_count += 1
+        progress = int((processed_count / total_missions) * 100)
+        print(f"Progress: {progress}%")
+        print(progress_callback)
+        if progress_callback:
+            progress_callback(progress)
 
     print("Mission orders sent!")
 
