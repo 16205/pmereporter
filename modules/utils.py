@@ -163,7 +163,12 @@ def ajust_paragraph_height(text, max_height, width, style):
     Returns:
     - list: A list of strings, where each string represents a part of the text that fits within the maximum height.
     """
+    height = calculate_paragraph_height(text)
     
+    if height < max_height:
+        text = [text]
+        return text
+
     # Split the text into sentences
     part1 = split_into_sentences(text)  # Start with all sentences in part1
     part2 = ""
@@ -220,7 +225,7 @@ def split_into_sentences(text):
     """
     # Create a pattern that matches periods, exclamation marks, or question marks
     # that are not preceded by any of the specified abbreviations.
-    pattern = r'(?<!\b(Mr|Mrs|Mme|M)\b\.)(?<=[.!?])\s+(?=[A-Z])'
+    pattern = r'(?<!\b(Mr|Mrs|Mme|M)\b\.)(?=(?:<br\s*/?>)|(?<=[.!?])\s+(?=[A-Z]))'
 
     # Use regex to split the text based on the pattern
     sentences = regex.split(pattern, text)
