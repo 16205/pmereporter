@@ -76,11 +76,15 @@ class Ui_MainWindow(object):
         self.departmentVerticalLayout.addWidget(self.titleLabel)
         # Department tableView selector
         self.departmentTableView = QtWidgets.QTableView()
+        self.departmentTableView.setFixedHeight(60)
         self.departmentVerticalLayout.addWidget(self.departmentTableView)
         self.rightVerticalLayout.addLayout(self.departmentVerticalLayout)
 
         self.fetchButton = QtWidgets.QPushButton("Fetch data")
         self.rightVerticalLayout.addWidget(self.fetchButton)
+
+        # Align right V Layout elements to top
+        self.rightVerticalLayout.addStretch(1)
 
         # Add both left and right layouts to the main layout
         self.mainHorizontalLayout.addLayout(self.leftVerticalLayout, 3) # 75% of space
