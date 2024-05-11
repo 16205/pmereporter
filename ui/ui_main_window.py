@@ -15,13 +15,22 @@ class Ui_MainWindow(object):
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(1120, 909)
         MainWindow.setWindowTitle("PMEReporter")
-        MainWindow.setWindowIcon(QtGui.QIcon('media\icon.png'))
+        MainWindow.setWindowIcon(QtGui.QIcon('media/icon.png'))
         
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
 
-        # ------------------ Main horizontal layout ------------------
-        self.mainHorizontalLayout = QtWidgets.QHBoxLayout(self.centralwidget)
+        # ------------------ Tab widget ------------------
+        self.tabWidget = QtWidgets.QTabWidget(MainWindow)
+        self.tabWidget.setObjectName("tabWidget")
+
+        # ------------------ First tab ------------------
+        self.tab1 = QtWidgets.QWidget()
+        self.tab1.setObjectName("tab1")
+        self.tabWidget.addTab(self.tab1, "Generate Mission Orders")
+
+        # ------------------ First tab horizontal layout ------------------
+        self.tab1layout = QtWidgets.QHBoxLayout(self.tab1) # Assign layout to the tab
 
         # ------------------ Left side vertical layout ------------------
         self.leftVerticalLayout = QtWidgets.QVBoxLayout()
@@ -30,7 +39,7 @@ class Ui_MainWindow(object):
         self.leftVerticalLayout.addWidget(self.titleLabel)
 
         # ------------------ Missions tableView ------------------
-        self.missionTableView = QtWidgets.QTableView(self.centralwidget)
+        self.missionTableView = QtWidgets.QTableView()
         self.missionTableView.setObjectName("Mission orders")
         self.leftVerticalLayout.addWidget(self.missionTableView)
 
@@ -88,11 +97,27 @@ class Ui_MainWindow(object):
         # Align right V Layout elements to top
         self.rightVerticalLayout.addStretch(1)
 
-        # Add both left and right layouts to the main layout
-        self.mainHorizontalLayout.addLayout(self.leftVerticalLayout, 3) # 75% of space
-        self.mainHorizontalLayout.addLayout(self.rightVerticalLayout, 1) # 25% of space
+        # Add both left and right layouts to the tab 1 layout
+        self.tab1layout.addLayout(self.leftVerticalLayout, 3) # 75% of space
+        self.tab1layout.addLayout(self.rightVerticalLayout, 1) # 25% of space
 
-        MainWindow.setCentralWidget(self.centralwidget)
+        # ------------------ Second tab ------------------
+        self.tab2 = QtWidgets.QWidget()
+        self.tab2.setObjectName("tab2")
+        self.tabWidget.addTab(self.tab2, "Sent mission orders")
+
+        # ------------------ Second tab vertical layout ----------------
+        self.tab2layout = QtWidgets.QVBoxLayout(self.tab2) # Assign layout to the tab
+        self.titleLabel = QtWidgets.QLabel("Sent elements")
+        self.titleLabel.setFont(QtGui.QFont("Arial", 12))
+
+        self.sentElementsTableView = QtWidgets.QTableView()
+        self.sentElementsTableView.setObjectName("Sent elements")
+
+        self.tab2layout.addWidget(self.titleLabel)
+        self.tab2layout.addWidget(self.sentElementsTableView)
+
+        MainWindow.setCentralWidget(self.tabWidget)
         self.statusbar = QtWidgets.QStatusBar(MainWindow)
         MainWindow.setStatusBar(self.statusbar)
 
