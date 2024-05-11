@@ -446,7 +446,7 @@ def add_header_footer(canvas, doc):
     
     canvas.restoreState()
 
-def check_sources_double_bookings(missions: list) -> dict:
+def check_sources_double_bookings(missions:list) -> dict:
     """
     This function iterates over a list of missions and stores in a dictionary all sources that are present in more than one mission.
     It then returns a dictionary of sources that are present in more than one mission, along with a list of the missions in which they are present.
@@ -478,7 +478,7 @@ def check_sources_double_bookings(missions: list) -> dict:
         if len(booked_sources[source]) > 1:
             double_bookings[source] = booked_sources[source]
 
-    return double_bookings
+    return None if not double_bookings else double_bookings
 
 def send_om(missions:dict, keys:list[str], progress_callback=None):
     load_dotenv(override=True)
@@ -530,8 +530,6 @@ def send_om(missions:dict, keys:list[str], progress_callback=None):
         # Update processed count and emit progress
         processed_count += 1
         progress = int((processed_count / total_missions) * 100)
-        print(f"Progress: {progress}%")
-        print(progress_callback)
         if progress_callback:
             progress_callback(progress)
 
