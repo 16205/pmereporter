@@ -66,13 +66,13 @@ def get_events(dateFrom:datetime, dateTo:datetime=None, departments:list=None, r
     # TODO: calculate datetime 1 day diff
     # TODO: use kwargs
 
-    print("Getting mission events...")
+    # print("Getting mission events...")
     # TODO: handle error if bad bearer token and other errors
     response = requests.post(connection_str + 'do/list', headers=headers, json=json)
 
     if response.status_code == 200:
         # Return response content only (this is why .json() is used)
-        print(f"Got {len(response.json()['items'])} mission events!")
+        # print(f"Got {len(response.json()['items'])} mission events!")
         return response.json()
     
     elif response.status_code == 401:
@@ -110,8 +110,8 @@ def get_locations(missions:list, min:int, max:int, progress_callback=None):
     processed_count = 0
 
     # Iterate through missions
-    print("Getting locations for every mission...")
-    for mission in tqdm(missions):
+    # print("Getting locations for every mission...")
+    for mission in (missions):
         # Get mission id (=key)
         id = mission["key"]
 
@@ -149,7 +149,7 @@ def get_locations(missions:list, min:int, max:int, progress_callback=None):
         if progress_callback:
             progress_callback(progress, min, max)
 
-    print("Got the locations!")
+    # print("Got the locations!")
     return missions
 
 def get_sources():
@@ -167,7 +167,7 @@ def get_sources():
     Raises:
         SystemExit: If there's a ValueError during the SharePoint query execution, indicating a potential connectivity issue.
     """
-    print("Getting list of sources...")
+    # print("Getting list of sources...")
     ctx = auth.authenticate_to_shpt()
 
     sp_list = ctx.web.lists.get_by_title("Sources")
@@ -183,7 +183,7 @@ def get_sources():
     for source in sources_list:
         sources[source.properties['Title']] = source.properties
 
-    print('Got all sources!')
+    # print('Got all sources!')
     return sources
 
 def get_departments(id:int=None):
@@ -236,6 +236,7 @@ def get_sent_elements(access_token:str):
             elements.append({'recipients': recipients, 'subject': subject, 'sent_time': sent_time})
         return elements
     else:
-        print("Failed to retrieve data:", response.status_code)
+        raise Exception('Failed to retrieve data: %s' % message)
+        # print("Failed to retrieve data:", response.status_code)
 
 # get_sent_elements(os.environ['MS_ACCESS_TOKEN'])

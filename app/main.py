@@ -84,15 +84,6 @@ def generate(keys:list[str]):
         missions = json.load(file1)
         sources = json.load(file2)
 
-    sources_double_boookings = process.check_sources_double_bookings(missions)
-    if sources_double_boookings:
-        print("\n/!\WARNING/!\: Double bookings detected for the following sources:")
-        for source in sources_double_boookings:
-            print(f"\nSource \"{source}\" is booked by missions:")
-            for mission in sources_double_boookings[source]:
-                print(f"{mission}")
-        print("\n")
-
     # Feed data into process.generate_pdfs() to generate PDF documents containing the missions details
     process.generate_pdfs(missions, sources, keys)    
 

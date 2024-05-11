@@ -51,7 +51,6 @@ def send_email(access_token:str, subject:str, recipients:list, content:str, file
     # Send the email
     response = requests.post(SENDMAIL_ENDPOINT, headers=headers, json=email_data)
     if response.status_code == 202:
-        # print(f"Email sent to {recipient}.")
         return
     else:
         raise ValueError(f"Failed to send email to {[recipient for recipient in recipients]}. {response.status_code} {response.reason}")
