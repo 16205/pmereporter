@@ -44,6 +44,10 @@ def fetch_and_store(date:datetime = None, departments:list=None, progress_callba
     missions = ingest.get_locations(missions, 10, 90, adjusted_progress)
     current_progress = 90  # After get_locations, we're at 90%
 
+    # Make sure temp/ exists
+    if not os.path.exists('temp'):
+        os.makedirs('temp')
+
     with open('temp/missions.json', 'w') as file:
         json.dump(missions, file)
     current_progress += 5  # Increment by 5% after writing missions data
@@ -103,6 +107,14 @@ def send(keys:list[str], progress_callback=None):
     if progress_callback:
         progress_callback(100)  # Ensure completion is signaled correctly
 
+
+def check_sources_conflicts():
+    with open('temp/missions.json', 'r') as file:
+        missions = json.load(file)
+        result = process.check_sources_double_bookings(missions)
+    return result
+
 # fetch_and_store(dateFrom)
 # generate(None)
 # send(None)
+# check_sources_conflicts()
