@@ -163,8 +163,8 @@ def ajust_paragraph_height(text, max_height, width, style):
     Returns:
     - list: A list of strings, where each string represents a part of the text that fits within the maximum height.
     """
-    height = calculate_paragraph_height(text)
-    
+    height = calculate_paragraph_height(text, width, style)
+
     if height < max_height:
         text = [text]
         return text
