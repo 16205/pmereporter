@@ -11,32 +11,6 @@ import os
 import re
 import sys
 
-def get_resources_from_departments(departments):
-    """
-    Extracts and returns the keys of resources from the given departments.
-
-    This function assumes that the input 'departments' is a response object from a request (e.g., from requests library)
-    which contains a JSON body with a list of resources. It parses this JSON to extract the 'key' of each resource
-    within the 'resources' list.
-
-    Parameters:
-    - departments: A response object that can be converted to JSON, expected to contain a 'resources' list.
-
-    Returns:
-    - A list of strings, where each string is the 'key' of a resource found in the input 'departments'.
-    """
-
-    departments = departments.json()
-
-    keys = [resource['key'] for resource in departments['resources']]
-
-    return keys
-
-# TODO: Create function that takes as input the raw api json and returns a clean dict with 
-# missions as keys and mission details as values, then store in a JSON file. Later, call generate_pdfs()
-# to generate PDF documents based on the missions and sources data, so that platypus usage for layout is
-# separated from data structuring jobs.
-
 def generate_pdfs(missions:dict, sources:dict, keys:list=None):
     """
     Generates PDF documents for each mission in the provided missions list, including ADR information and other mission details.
@@ -49,14 +23,14 @@ def generate_pdfs(missions:dict, sources:dict, keys:list=None):
     The generated PDF includes mission details, agent and client information, ADR information for sources involved in the mission, and signature fields.
     """
 
-    print("Generating pdfs...")
+    # print("Generating pdfs...")
 
     # Define styles
     styles = getSampleStyleSheet()
     styles.add(ParagraphStyle(name='Justify', parent=styles['Normal'], fontSize=10, fontName='Helvetica', alignment=TA_JUSTIFY,))
     smaller_font_style = ParagraphStyle('SmallerFont', parent=styles['Normal'], fontSize=9, fontName='Helvetica')
 
-    for mission in tqdm(missions):
+    for mission in (missions):
         # Skip missions that have a key in "keys" input argument list (That is, missions not selected to be generated in GUI)
         if keys and mission.get('key') not in keys:
             continue
@@ -149,7 +123,7 @@ def generate_pdfs(missions:dict, sources:dict, keys:list=None):
         # Split total comments text into two paragraphs if height > max height
         comments_paragraph = utils.ajust_paragraph_height(comments_text, max_height, max_width, styles['Normal'])
 
-        # Print one paragraph per table row
+        # Display one paragraph per table row
         for comment in comments_paragraph:
             mission_table_data.append([Paragraph("<b>Remarks/comments</b>"), 
                                        Paragraph(comment)])
@@ -365,8 +339,8 @@ def generate_pdfs(missions:dict, sources:dict, keys:list=None):
 
         # Create directory to store generated PDFs
         day_missions = mission_start.strftime('%Y%m%d')
-        if not os.path.exists(f".\generated\{day_missions}"):
-            os.makedirs(f".\generated\{day_missions}")
+        if not os.path.exists(f"./generated/{day_missions}"):
+            os.makedirs(f"./generated/{day_missions}")
         
         # Get names for file naming
         names = ""
@@ -374,7 +348,7 @@ def generate_pdfs(missions:dict, sources:dict, keys:list=None):
             names += resource.get('lastName') + " " + resource.get('firstName') + " - "
         
         # Create a PDF document
-        doc = SimpleDocTemplate(f".\generated\{day_missions}\{names}{mission.get('key')}.pdf", pagesize=A4, topMargin=100)
+        doc = SimpleDocTemplate(f"./generated/{day_missions}/{names}{mission.get('key')}.pdf", pagesize=A4, topMargin=100)
         
         # Build the PDF document
         try:
@@ -382,7 +356,7 @@ def generate_pdfs(missions:dict, sources:dict, keys:list=None):
         except PermissionError as e:
             sys.exit(f"Please close the document \"{e.filename}\" and try again.")
             
-    print("Pdfs generated!")
+    # print("Pdfs generated!")
     return
 
 def compute_activity(A0:float, A0_date:datetime, isotope:str, date:datetime):
@@ -437,8 +411,8 @@ def add_header_footer(canvas, doc):
     canvas.drawString(75, 30, footer_text)  # Adjust coordinates as needed
 
     # Logo image to include
-    logo1_path = "media\Vincotte_RGB_H.png"
-    logo2_path = "media\Member-Group-Kiwa-FC.jpg"
+    logo1_path = utils.resource_path("./media/Vincotte_RGB_H.png")
+    logo2_path = utils.resource_path("./media/Member-Group-Kiwa-FC.jpg")
     canvas.drawImage(logo1_path, 75, 759, width=52, height=52)  # Draw the first logo
     canvas.drawImage(logo2_path, 135, 760, width=62.28, height=30)  # Draw the second logo
     
@@ -483,14 +457,14 @@ def check_sources_double_bookings(missions:list) -> dict:
 def send_om(missions:dict, keys:list[str], progress_callback=None):
     load_dotenv(override=True)
     access_token = os.environ.get('MS_ACCESS_TOKEN')
-    print("Sending mission orders...")
+    # print("Sending mission orders...")
 
     # Variables for process tracking
     total_missions = len(missions)
     processed_count = 0
 
     # Iterate over all missions
-    for mission in tqdm(missions):
+    for mission in (missions):
         # Skip missions that have a key in "keys" input argument list (That is, missions not selected to be generated in GUI)
         if keys and mission.get('key') not in keys:
             continue
@@ -533,7 +507,7 @@ def send_om(missions:dict, keys:list[str], progress_callback=None):
         if progress_callback:
             progress_callback(progress)
 
-    print("Mission orders sent!")
+    # print("Mission orders sent!")
 
 def clean_data(missions):
     missions_cleaned = []
