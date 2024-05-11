@@ -3,5 +3,4 @@ requests
 reportlab
 tqdm
 Office365-REST-Python-Client
-exchangelib
 regex
