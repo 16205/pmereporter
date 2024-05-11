@@ -27,6 +27,12 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.sendButton.clicked.connect(self.send_mission_orders)
         self.checkSources.clicked.connect(self.check_source_conflicts)
 
+    def exception_hook(exctype, value, traceback):
+        QtWidgets.QMessageBox.critical(None, "Error", str(value))
+        sys.__excepthook__(exctype, value, traceback)  # Optionally, re-raise the error to stop the program
+
+    sys.excepthook = exception_hook
+
     def closeEvent(self, event):
         # Call your cleanup function here
         self.cleanUpFolders()
@@ -39,12 +45,13 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         try:
             if os.path.exists(temp_folder):
                 shutil.rmtree(temp_folder)
-                print("Temporary files deleted.")
+                # print("Temporary files deleted.")
             if os.path.exists(generated_folder):
                 shutil.rmtree(generated_folder)
-                print("Generated files deleted.")
+                # print("Generated files deleted.")
         except Exception as e:
-            print(f"Error deleting temporary files: {e}")
+            raise Exception
+            # print(f"Error deleting temporary files: {e}")
 
     def setupTable(self):
         # Initialize the model for tableView
@@ -214,6 +221,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.current_task = 'check_sources_conflicts'
         self.message = 'Source conflicts'
         self.start_thread(self.current_task, self.message)
+
+    def sync_sent_elements(self):
+        pass
 
 # ------------------ Worker object ------------------
 
