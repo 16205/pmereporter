@@ -1,5 +1,5 @@
 from PyQt5 import QtWidgets
-from PyQt5.QtGui import QStandardItemModel, QStandardItem
+from PyQt5.QtGui import QStandardItemModel, QStandardItem, QColor
 from PyQt5.QtCore import QThread, pyqtSignal, Qt
 from PyQt5.QtWidgets import QProgressDialog
 import json
@@ -18,11 +18,14 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.setupTable() # Initialize the model for tableView
         self.current_task = None  # Add a variable to track the current task
         self.message = None # The message to display when the task is ongoing
+        self.conflict_colors = {}  # Initialize the dictionary to store colors for each source
+        self.color_index = 0  # Initialize the index for assigning colors
 
         # Connect buttons to functions
         self.fetchButton.clicked.connect(self.fetch_data)
         self.genButton.clicked.connect(self.generate_mission_orders)
         self.sendButton.clicked.connect(self.send_mission_orders)
+        self.checkSources.clicked.connect(self.check_source_conflicts)
 
     def closeEvent(self, event):
         # Call your cleanup function here
@@ -31,11 +34,15 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def cleanUpFolders(self):
         # Example: Clearing a temporary folder on close
-        temp_folder = './temp'
+        temp_folder = './temp/'
+        generated_folder = './generated/'
         try:
             if os.path.exists(temp_folder):
                 shutil.rmtree(temp_folder)
                 print("Temporary files deleted.")
+            if os.path.exists(generated_folder):
+                shutil.rmtree(generated_folder)
+                print("Generated files deleted.")
         except Exception as e:
             print(f"Error deleting temporary files: {e}")
 
@@ -54,7 +61,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
     # ------------------ Functions that interact with the GUI ------------------
 
-    def load_data_to_table(self, file_path):
+    def load_data_to_table(self, file_path, conflicts=None):
         # Clear existing data from the model
         self.model.clear()
 
@@ -101,6 +108,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             for row in range(self.model.rowCount()):
                 self.missionTableView.setRowHeight(row, 50)
 
+        # Load JSON data from a file and populate the table...
+        if conflicts:
+            self.highlight_conflict_rows(conflicts)
+
 
     def get_selected_items(self):
         selected_items = []
@@ -110,12 +121,44 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 selected_items.append(mission_key)
         return selected_items
 
+    def show_conflict_results(self, result_info):
+        if result_info['data']:
+            # There are conflicts, show the detailed message and update the table
+            self.load_data_to_table("./temp/missions.json", result_info['data'])
+            QtWidgets.QMessageBox.information(self, "Conflict Results", result_info['message'])
+        else:
+            # No conflicts, just show the message
+            QtWidgets.QMessageBox.information(self, "Conflict Results", result_info['message'])
+
+    def assign_colors_to_conflicts(self, conflicts):
+        # Assign a unique color for each source
+        available_colors = ['lightsalmon', 'lightcoral', 'lightyellow', 'lightpink', 'lightblue', 'lightgrey']
+        for key in conflicts.keys():
+            if key not in self.conflict_colors:
+                self.conflict_colors[key] = available_colors[self.color_index % len(available_colors)]
+                self.color_index += 1
+    
+    def highlight_conflict_rows(self, conflicts):
+        # Call this method after data is loaded into the table
+        self.assign_colors_to_conflicts(conflicts)
+        for row in range(self.model.rowCount()):
+            item_key = self.model.item(row, 5).text()  # Assuming key is in the sixth column
+            for source, missions in conflicts.items():
+                if item_key in missions:
+                    for col in range(self.model.columnCount()):
+                        self.model.item(row, col).setBackground(QColor(self.conflict_colors[source]))
+
     # ------------------ Functions related to the worker call ------------------
 
     def start_thread(self, task_type, message, *args):
         self.thread = Worker(task_type, *args)  # Initialize the worker thread
         self.thread.progress_updated.connect(self.update_progress)  # Connect progress update signal
         self.thread.finished.connect(self.task_finished)  # Connect the finished signal
+        
+        # Only connect the result_ready signal for the check_sources_conflicts task
+        if task_type == 'check_sources_conflicts':
+            self.thread.result_ready.connect(self.show_conflict_results)
+        
         self.progress_dialog = QProgressDialog(f"Please wait, {message.lower()}...", "Cancel", 0, 100, self)
         self.progress_dialog.setWindowTitle(f"{message}")
         self.progress_dialog.setModal(True)
@@ -131,11 +174,12 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         # Check which task finished and act accordingly
         if self.current_task == 'fetch_and_store':
             self.load_data_to_table("./temp/missions.json")
-        elif self.current_task == 'generate':
-            pass
+        # elif self.current_task == 'generate':
+        #     pass
         self.progress_dialog.setValue(100)  # Update progress dialog to show completion
         self.current_task = None  # Reset current task
         self.message = None # Clear message
+
 
     # ------------------ Functions linked to buttons ------------------
 
@@ -176,6 +220,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 class Worker(QThread):
     progress_updated = pyqtSignal(int)
     finished = pyqtSignal()
+    result_ready = pyqtSignal(dict)  # Signal to send back data
 
     def __init__(self, task_type, *args, **kwargs):
         super(Worker, self).__init__()
@@ -191,7 +236,13 @@ class Worker(QThread):
         elif self.task_type == 'send':
             main.send(*self.args, progress_callback=self.handle_progress, **self.kwargs)
         elif self.task_type == 'check_sources_conflicts':
-            main.check_sources_conflicts(*self.args, **self.kwargs)
+            result = main.check_sources_conflicts(*self.args, **self.kwargs)
+            if result:
+                sources = "\n".join(f"• {key}" for key in result.keys())
+                message = f"The following sources are booked several times:\n{sources}\nCheck missions overview for more information"
+                self.result_ready.emit({'message': message, 'data': result})
+            else:
+                self.result_ready.emit({'message': "No conflicts detected!", 'data': None})
         self.finished.emit()
 
     def handle_progress(self, progress):
