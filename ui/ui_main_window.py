@@ -81,7 +81,9 @@ class Ui_MainWindow(object):
         self.rightVerticalLayout.addLayout(self.departmentVerticalLayout)
 
         self.fetchButton = QtWidgets.QPushButton("Fetch data")
+        self.checkSources = QtWidgets.QPushButton("Check source conflicts")
         self.rightVerticalLayout.addWidget(self.fetchButton)
+        self.rightVerticalLayout.addWidget(self.checkSources)
 
         # Align right V Layout elements to top
         self.rightVerticalLayout.addStretch(1)
@@ -111,6 +113,7 @@ class Ui_MainWindow(object):
         self.fetchButton.setText(_translate("MainWindow", "Fetch data"))
         self.genButton.setText(_translate("MainWindow", "Generate mission orders"))
         self.sendButton.setText(_translate("MainWindow", "Send mission orders"))
+        self.checkSources.setText(_translate("MainWindow", "Check source conflicts"))
 
 
 if __name__ == "__main__":
