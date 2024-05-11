@@ -1,8 +1,10 @@
 from datetime import datetime, timedelta
 from reportlab.platypus import Paragraph
 import json
+import os
 import re
 import regex
+import sys
 
 def update_token_env(new_token:str, token_key:str):
     """
@@ -17,7 +19,7 @@ def update_token_env(new_token:str, token_key:str):
     Returns:
     - None
     """
-    env_file_path = '.env'
+    env_file_path = resource_path('.env')
 
     # Read the current contents of the .env file
     with open(env_file_path, 'r') as file:
@@ -234,3 +236,8 @@ def split_into_sentences(text):
     sentences = [s for s in sentences if s]
 
     return sentences
+
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base_path, relative_path)
