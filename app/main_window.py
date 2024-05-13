@@ -1,10 +1,12 @@
 from PyQt6 import QtWidgets
 from PyQt6.QtGui import QStandardItemModel, QStandardItem, QColor
 from PyQt6.QtCore import QThread, pyqtSignal, Qt
-from PyQt6.QtWidgets import QProgressDialog
+from PyQt6.QtWidgets import QProgressDialog, QMessageBox
+from datetime import datetime
 import json
 import os
 import shutil
+import subprocess
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from ui.ui_main_window import Ui_MainWindow
@@ -23,6 +25,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.conflict_colors = {}  # Initialize the dictionary to store colors for each source
         self.color_index = 0  # Initialize the index for assigning colors
 
+        # self.cleanUpFolders()
         utils.init_folders()
 
         # Connect buttons to functions
@@ -31,6 +34,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.sendButton.clicked.connect(self.send_mission_orders)
         self.checkSources.clicked.connect(self.check_source_conflicts)
         self.syncButton.clicked.connect(self.sync_sent_elements)
+        self.missionTableView.doubleClicked.connect(self.handleMissionDoubleClick)
 
     def exception_hook(exctype, value, traceback):
         QtWidgets.QMessageBox.critical(None, "Error", str(value))
@@ -40,7 +44,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def closeEvent(self, event):
         # Call your cleanup function here
-        self.cleanUpFolders()
+        # self.cleanUpFolders()
         super().closeEvent(event)
 
     def cleanUpFolders(self):
@@ -62,7 +66,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         # Add padding for text in cells
         table.setStyleSheet("""
             QTableView::item {
-                padding: 5px;  /* Adjust padding as needed */
+                padding: 3px;  /* Adjust padding as needed */
             }
             QTableView::item:selected {
                 background-color: #bcdcf4;  /* Explicitly set the background color for selected items */
@@ -80,7 +84,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.missionTableView.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)  # Enable row selection
 
         # Set column headers
-        self.missionHeaders = ['Select', 'Agents', 'Date & time', 'Customer', 'SO n°', 'Intervention n°', 'Departure From', 'Location', 'RT Sources']
+        self.missionHeaders = ['Select', 'Agents', 'Date & time', 'Client', 'SO n°', 'Intervention n°', 'Departure From', 'Location', 'RT Sources']
         self.missionModel.setHorizontalHeaderLabels(self.missionHeaders)
 
         self.apply_styleSheet(self.missionTableView)
@@ -102,6 +106,33 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.apply_styleSheet(self.sentElementsTableView)
 
         self.sentElementsTableView.verticalHeader().hide()
+
+    def handleMissionDoubleClick(self, index):
+        # Extract the mission key from the selected row
+        mission_key = self.missionModel.item(index.row(), 5).text()  # Assuming column 5 has the mission key
+        mission = None
+        with open('temp/missions.json', 'r') as file:
+            missions = json.load(file)
+        for data in missions:  # Assuming you store mission data somewhere accessible
+            if data['key'] == mission_key:
+                mission = data
+                break
+        
+        if mission:
+            names = ""
+            for resource in mission.get('resources'):
+                names += resource['lastName'] + " " + resource['firstName'] + " - "
+            mission_start = datetime.strptime(mission['start'], '%Y-%m-%d %H:%M:%S')
+
+            day_missions = mission_start.strftime('%Y%m%d')  # Format the date
+            pdf_path = f"./generated/{day_missions}/{names}{mission['key']}.pdf"
+            
+            if os.path.exists(pdf_path):
+                # Open the PDF if it exists
+                subprocess.Popen([pdf_path], shell=True)
+            else:
+                # Show message box if the PDF does not exist
+                QMessageBox.information(self, "PDF Not Found", "Please first generate the PDF.")
 
     # ------------------ Functions that interact with the GUI ------------------
 
