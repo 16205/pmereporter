@@ -2,11 +2,11 @@ from datetime import datetime, time
 import json
 import os
 import sys
+from dotenv import load_dotenv
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from modules import ingest, process
-from modules.auth import authenticate_to_ppme
+from modules import auth, ingest, process, utils
 
-dateFrom = datetime(2023, 12, 14)
+date = datetime(2023, 12, 14)
 # dateTo = datetime(2023, 11, 21, 23, 59, 59, 999)
 
 def fetch_and_store(date:datetime = None, departments:list=None, progress_callback=None):
@@ -23,7 +23,7 @@ def fetch_and_store(date:datetime = None, departments:list=None, progress_callba
         if progress_callback:
             progress_callback(current_progress)
     except Exception:
-        authenticate_to_ppme()
+        auth.authenticate_to_ppme()
         missions = ingest.get_events(dateFrom, dateTo, departments=[30])
         current_progress += 5  # Repeat increment if re-authentication and fetching events
         if progress_callback:
@@ -44,19 +44,14 @@ def fetch_and_store(date:datetime = None, departments:list=None, progress_callba
     missions = ingest.get_locations(missions, 10, 90, adjusted_progress)
     current_progress = 90  # After get_locations, we're at 90%
 
-    # Make sure temp/ exists
-    if not os.path.exists('temp'):
-        os.makedirs('temp')
+    utils.save_to_json('temp/missions.json', missions)
 
-    with open('temp/missions.json', 'w') as file:
-        json.dump(missions, file)
     current_progress += 5  # Increment by 5% after writing missions data
     if progress_callback:
         progress_callback(current_progress)
 
     sources = ingest.get_sources()
-    with open('temp/sources.json', 'w') as file:
-        json.dump(sources, file)
+    utils.save_to_json('temp/sources.json', sources)
     current_progress += 5  # Final 5% to complete the process
     if progress_callback:
         # progress_callback(current_progress)
@@ -98,14 +93,27 @@ def send(keys:list[str], progress_callback=None):
     if progress_callback:
         progress_callback(100)  # Ensure completion is signaled correctly
 
-
 def check_sources_conflicts():
     with open('temp/missions.json', 'r') as file:
         missions = json.load(file)
         result = process.check_sources_double_bookings(missions)
     return result
 
-# fetch_and_store(dateFrom)
+def get_sent_elements():
+    try:
+        load_dotenv(override=True)
+        access_token = os.environ.get('MS_ACCESS_TOKEN')
+        utils.save_to_json('temp/sentElements.json', ingest.get_sent_elements(access_token))
+    except ValueError:
+        try:
+            access_token = auth.refresh_access_token()
+            utils.save_to_json('temp/sentElements.json', ingest.get_sent_elements(access_token))
+        except ValueError:
+            access_token = auth.authenticate_to_ms_graph()
+            utils.save_to_json('temp/sentElements.json', ingest.get_sent_elements(access_token))
+            
+# fetch_and_store(date)
 # generate(None)
 # send(None)
 # check_sources_conflicts()
+# get_sent_elements()
