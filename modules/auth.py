@@ -43,11 +43,10 @@ def authenticate_to_ppme():
         # Using '.get()' so it returns {} if key 'access_token' does not exist
         bearer_token = data.get('access_token', {})
         update_token_env(bearer_token, 'PPME_BEARER_TOKEN')
-        print("Successfully authenticated")
+        # print("Successfully authenticated")
         return
     else:
-        # TODO: Investigate whether to replace print with sys.exit()
-        print("Failed to authenticate:", response.status_code)
+        raise Exception
 
 def authenticate_to_shpt():
     """
@@ -176,6 +175,8 @@ def refresh_access_token():
     Raises:
         requests.exceptions.HTTPError: If the request to refresh the access token fails
     """
+    load_dotenv(override=True)
+
     CLIENT_ID = os.environ['MS_CLIENT_ID']
     CLIENT_SECRET = os.environ['MS_CLIENT_SECRET']
     TENANT_ID = os.environ['MS_TENANT_ID']
