@@ -19,7 +19,7 @@ def update_token_env(new_token:str, token_key:str):
     Returns:
     - None
     """
-    env_file_path = resource_path('.env')
+    env_file_path = resource_path('../.env')
 
     # Read the current contents of the .env file
     with open(env_file_path, 'r') as file:
@@ -211,6 +211,13 @@ def save_to_txt(missions):
     with open('example.txt', 'w') as file:
         file.write(json.dumps(missions, indent=4))
 
+def save_to_json(path, content):
+    # create folder if it doesn't exist
+    if not os.path.exists(os.path.dirname(path)):
+        os.makedirs(os.path.dirname(path))
+    with open((path), 'w') as file:
+        json.dump(content, file)
+
 def split_into_sentences(text):
     """
     Splits a given text into sentences based on punctuation marks.
@@ -238,6 +245,23 @@ def split_into_sentences(text):
     return sentences
 
 def resource_path(relative_path):
-    """ Get absolute path to resource, works for dev and for PyInstaller """
+    """ Get absolute path to resource, works for dev and for PyInstaller.
+        Converts backslashes in relative paths to forward slashes for consistency.
+    """
+    # Normalize the path by replacing backslashes with forward slashes
+    normalized_path = relative_path.replace("/", "\\")
+    
+    # Get the base path depending on the context (development or bundled)
     base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
-    return os.path.join(base_path, relative_path)
+    
+    # Join the base path with the normalized relative path
+    return os.path.join(base_path, normalized_path)
+
+def init_folders():
+    """
+    Initializes the necessary folders for the application to run.
+    """
+    if not os.path.exists(resource_path('../temp')):
+        os.makedirs(resource_path('../temp'))
+    if not os.path.exists(resource_path('../generated')):
+        os.makedirs(resource_path('../generated'))
