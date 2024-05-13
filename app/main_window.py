@@ -1,7 +1,7 @@
-from PyQt5 import QtWidgets
-from PyQt5.QtGui import QStandardItemModel, QStandardItem, QColor
-from PyQt5.QtCore import QThread, pyqtSignal, Qt
-from PyQt5.QtWidgets import QProgressDialog
+from PyQt6 import QtWidgets
+from PyQt6.QtGui import QStandardItemModel, QStandardItem, QColor
+from PyQt6.QtCore import QThread, pyqtSignal, Qt
+from PyQt6.QtWidgets import QProgressDialog
 import json
 import os
 import shutil
@@ -13,7 +13,7 @@ from modules import utils
 
 class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def __init__(self, parent=None):
-        super(MainWindow, self).__init__(parent)
+        super().__init__(parent)  # Updated super call for Python 3
         self.setupUi(self)
         self.showMaximized()  # This line maximizes the window on startup
         self.setupMissionTable() # Initialize the model for Mission tableView
@@ -76,8 +76,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.missionTableView.setModel(self.missionModel)
 
         # Set the table view to only allow checkbox changes
-        self.missionTableView.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)  # Disable text editing
-        self.missionTableView.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)  # Enable row selection
+        self.missionTableView.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)  # Disable text editing
+        self.missionTableView.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)  # Enable row selection
 
         # Set column headers
         self.missionHeaders = ['Select', 'Agents', 'Date & time', 'Customer', 'SO n°', 'Intervention n°', 'Departure From', 'Location', 'RT Sources']
@@ -85,15 +85,16 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.apply_styleSheet(self.missionTableView)
 
-        self.missionTableView.verticalHeader().setDefaultAlignment(Qt.AlignCenter)
+        self.missionTableView.verticalHeader().setDefaultAlignment(Qt.AlignmentFlag.AlignCenter)
+
     def setupSentTable(self):
         # Initialize the model for tableView
         self.sentModel = QStandardItemModel(self)
         self.sentElementsTableView.setModel(self.sentModel)
 
         # Set the table view to only allow checkbox changes
-        self.sentElementsTableView.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)  # Disable text editing
-        self.sentElementsTableView.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)  # Enable row selection
+        self.sentElementsTableView.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)  # Disable text editing
+        self.sentElementsTableView.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)  # Enable row selection
 
         self.sentHeaders = ['Recipients', 'Subject', 'Sent Time']
         self.sentModel.setHorizontalHeaderLabels(self.sentHeaders)
@@ -124,7 +125,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 # Create a checkbox item
                 checkbox_item = QStandardItem()
                 checkbox_item.setCheckable(True)
-                checkbox_item.setCheckState(Qt.Checked)
+                checkbox_item.setCheckState(Qt.CheckState.Checked)
                 row.append(checkbox_item)
                 # Append other data
                 resource_names = "\n".join(f"{resource['lastName']} {resource['firstName']}" for resource in item.get('resources'))
@@ -143,7 +144,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 ])
                 # Set vertical alignment for all items in the row
                 for cell in row:
-                    cell.setTextAlignment(Qt.AlignVCenter | Qt.AlignLeft)
+                    cell.setTextAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
                 self.missionModel.appendRow(row)
 
             # Resize columns and rows
@@ -159,7 +160,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def get_selected_items(self):
         selected_items = []
         for row in range(self.missionModel.rowCount()):
-            if self.missionModel.item(row, 0).checkState() == Qt.Checked:
+            if self.missionModel.item(row, 0).checkState() == Qt.CheckState.Checked:
                 mission_key = self.missionModel.item(row, 5).text()  # Assuming the mission key is in the sixth column
                 selected_items.append(mission_key)
         return selected_items
@@ -219,7 +220,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 ])
                 # Set vertical alignment for all items in the row
                 for cell in row:
-                    cell.setTextAlignment(Qt.AlignVCenter | Qt.AlignLeft)
+                    cell.setTextAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
                 self.sentModel.appendRow(row)
                 
             # Resize columns and rows
@@ -244,7 +245,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.progress_dialog.setModal(True)
         self.progress_dialog.setAutoClose(True)
         self.thread.start()  # Start the thread
-        if self.progress_dialog.exec_() == QProgressDialog.Rejected:
+        if self.progress_dialog.exec() == QProgressDialog.DialogCode.Rejected:
             self.thread.terminate()  # Stop the thread if the dialog is canceled
 
     def update_progress(self, value):
@@ -339,4 +340,4 @@ if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     mainWin = MainWindow()
     mainWin.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
