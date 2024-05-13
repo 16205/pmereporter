@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
-from modules import auth
+from . import auth
 from tqdm import tqdm
 import os
 import requests
@@ -236,7 +236,5 @@ def get_sent_elements(access_token:str):
             elements.append({'recipients': recipients, 'subject': subject, 'sent_time': sent_time})
         return elements
     else:
-        raise Exception('Failed to retrieve data: %s' % message)
+        raise ValueError(f"Failed to retrieve data: {response.status_code}")
         # print("Failed to retrieve data:", response.status_code)
-
-# get_sent_elements(os.environ['MS_ACCESS_TOKEN'])
