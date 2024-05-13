@@ -411,8 +411,8 @@ def add_header_footer(canvas, doc):
     canvas.drawString(75, 30, footer_text)  # Adjust coordinates as needed
 
     # Logo image to include
-    logo1_path = utils.resource_path("./media/Vincotte_RGB_H.png")
-    logo2_path = utils.resource_path("./media/Member-Group-Kiwa-FC.jpg")
+    logo1_path = utils.resource_path("../media/Vincotte_RGB_H.png")
+    logo2_path = utils.resource_path("../media/Member-Group-Kiwa-FC.jpg")
     canvas.drawImage(logo1_path, 75, 759, width=52, height=52)  # Draw the first logo
     canvas.drawImage(logo2_path, 135, 760, width=62.28, height=30)  # Draw the second logo
     
@@ -483,10 +483,10 @@ def send_om(missions:dict, keys:list[str], progress_callback=None):
         intervention_date = mission_start.strftime('%d/%m/%Y')
         content = f"Please find in attachment the Intervention Document (Nr: {number})\n\n"
             
-        attachment_path = f"./generated/{mission_start.strftime('%Y%m%d')}/{names}{number}.pdf"
+        attachment_path = f"generated/{mission_start.strftime('%Y%m%d')}/{names}{number}.pdf"
         
         # recipients_str is for development purposes
-        recipients_str = "["
+        recipients_str = "[\n"
         for recipient in recipients:
             recipients_str += recipient + ",\n"
         recipients_str += "]"
@@ -520,7 +520,7 @@ def clean_data(missions):
             "end": str(datetime.strptime(mission.get('end'), "%Y-%m-%dT%H:%M:%S")),
             "comments": [],
             "customers": [],
-            "SOnumber": str(mission.get('project').get('fields').get('PROJET_SO_NUMBER')),
+            "SOnumber": str(mission.get('project', '').get('fields', '').get('PROJET_SO_NUMBER', '')),
             "departurePlace": mission.get('fields').get('DEPARTUREPLACE') if mission.get('fields').get('DEPARTUREPLACE') != '' else None,
             "normCr": [],
             "sources": [],
