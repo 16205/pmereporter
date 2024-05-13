@@ -44,8 +44,8 @@ class Ui_MainWindow(object):
         self.leftVerticalLayout.addWidget(self.missionTableView)
 
         self.horizontalLayout = QtWidgets.QHBoxLayout()
-        self.genButton = QtWidgets.QPushButton("Generate mission orders")
-        self.sendButton = QtWidgets.QPushButton("Send mission orders")
+        self.genButton = QtWidgets.QPushButton("Generate Mission Orders")
+        self.sendButton = QtWidgets.QPushButton("Send Mission Orders")
         self.horizontalLayout.addWidget(self.genButton)
         self.horizontalLayout.addWidget(self.sendButton)
         self.leftVerticalLayout.addLayout(self.horizontalLayout)
@@ -89,8 +89,8 @@ class Ui_MainWindow(object):
         self.departmentVerticalLayout.addWidget(self.departmentTableView)
         self.rightVerticalLayout.addLayout(self.departmentVerticalLayout)
 
-        self.fetchButton = QtWidgets.QPushButton("Fetch data")
-        self.checkSources = QtWidgets.QPushButton("Check source conflicts")
+        self.fetchButton = QtWidgets.QPushButton("Load Missions")
+        self.checkSources = QtWidgets.QPushButton("Check RT Source Conflicts")
         self.rightVerticalLayout.addWidget(self.fetchButton)
         self.rightVerticalLayout.addWidget(self.checkSources)
 
@@ -98,8 +98,8 @@ class Ui_MainWindow(object):
         self.rightVerticalLayout.addStretch(1)
 
         # Add both left and right layouts to the tab 1 layout
-        self.tab1layout.addLayout(self.leftVerticalLayout, 3) # 75% of space
-        self.tab1layout.addLayout(self.rightVerticalLayout, 1) # 25% of space
+        self.tab1layout.addLayout(self.leftVerticalLayout, 4) # 80% of space
+        self.tab1layout.addLayout(self.rightVerticalLayout, 1) # 20% of space
 
         # ------------------ Second tab ------------------
         self.tab2 = QtWidgets.QWidget()
@@ -114,8 +114,11 @@ class Ui_MainWindow(object):
         self.sentElementsTableView = QtWidgets.QTableView()
         self.sentElementsTableView.setObjectName("Sent elements")
 
+        self.syncButton = QtWidgets.QPushButton("Sync")
+
         self.tab2layout.addWidget(self.titleLabel)
         self.tab2layout.addWidget(self.sentElementsTableView)
+        self.tab2layout.addWidget(self.syncButton)
 
         MainWindow.setCentralWidget(self.tabWidget)
         self.statusbar = QtWidgets.QStatusBar(MainWindow)
