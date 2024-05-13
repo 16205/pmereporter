@@ -196,7 +196,7 @@ def generate_pdfs(missions:dict, sources:dict, keys:list=None):
                 elements.append(s_r_table)
 
             else:
-                elements.append(Paragraph('Aller / Heen', styles['Heading5']))
+                elements.append(Paragraph('Heen / Aller', styles['Heading5']))
                 s_r_table_data.append([Paragraph("<b>Verzender / Expéditeur</b>"),
                                    Paragraph("<b>Bestemmeling / Destinataire</b>")])
                 s_r_table_data.append([Paragraph(f"Vinçotte NV<br/><br/>{addresses.get(departureplace)}"),
@@ -206,7 +206,7 @@ def generate_pdfs(missions:dict, sources:dict, keys:list=None):
                 s_r_table.setStyle(style)
                 elements.append(s_r_table)
 
-                elements.append(Paragraph('Retour / Terug', styles['Heading5']))
+                elements.append(Paragraph('Terug / Retour', styles['Heading5']))
                 s_r_table_data = []
                 s_r_table_data.append([Paragraph("<b>Verzender / Expéditeur</b>"),
                                    Paragraph("<b>Bestemmeling / Destinataire</b>")])
@@ -520,7 +520,7 @@ def clean_data(missions):
             "end": str(datetime.strptime(mission.get('end'), "%Y-%m-%dT%H:%M:%S")),
             "comments": [],
             "customers": [],
-            "SOnumber": str(mission.get('project', '').get('fields', '').get('PROJET_SO_NUMBER', '')),
+            "SOnumber": str(mission.get('project').get('fields').get('PROJET_SO_NUMBER')) if mission.get('project').get('fields').get('PROJET_SO_NUMBER') else None,
             "departurePlace": mission.get('fields').get('DEPARTUREPLACE') if mission.get('fields').get('DEPARTUREPLACE') != '' else None,
             "normCr": [],
             "sources": [],
