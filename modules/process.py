@@ -512,6 +512,8 @@ def send_om(missions:dict, keys:list[str], progress_callback=None):
 def clean_data(missions):
     missions_cleaned = []
     for mission in missions['items']:
+        
+        
         # Initialize each mission with defaults
         mission_dict = {
             "key": str(mission.get('key')),
@@ -520,7 +522,7 @@ def clean_data(missions):
             "end": str(datetime.strptime(mission.get('end'), "%Y-%m-%dT%H:%M:%S")),
             "comments": [],
             "customers": [],
-            "SOnumber": str(mission.get('project').get('fields').get('PROJET_SO_NUMBER')) if mission.get('project').get('fields').get('PROJET_SO_NUMBER') else None,
+            "SOnumber": None,
             "departurePlace": mission.get('fields').get('DEPARTUREPLACE') if mission.get('fields').get('DEPARTUREPLACE') != '' else None,
             "normCr": [],
             "sources": [],
@@ -528,6 +530,12 @@ def clean_data(missions):
             "oneWayTransport": mission.get('fields').get('ONEWAYTRANSPORT'),
             "return": False
         }
+
+        # Populate SOnumber
+        # Safely navigate the nested dictionaries
+        project = mission.get('project')
+        if project:
+            mission_dict['SOnumber'] = str(project.get('fields').get('PROJET_SO_NUMBER')) if mission.get('project').get('fields').get('PROJET_SO_NUMBER') else None,
 
         # Remove leading zeroes from SOnumbers
         if mission_dict['SOnumber']:
