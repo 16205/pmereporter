@@ -516,7 +516,7 @@ def clean_data(missions):
         
         # Initialize each mission with defaults
         mission_dict = {
-            "key": str(mission.get('key')),
+            "key": mission.get('key'),
             "resources": [],
             "start": str(datetime.strptime(mission.get('start'), "%Y-%m-%dT%H:%M:%S")),
             "end": str(datetime.strptime(mission.get('end'), "%Y-%m-%dT%H:%M:%S")),
@@ -535,8 +535,7 @@ def clean_data(missions):
         # Safely navigate the nested dictionaries
         project = mission.get('project')
         if project:
-            mission_dict['SOnumber'] = str(project.get('fields').get('PROJET_SO_NUMBER')) if mission.get('project').get('fields').get('PROJET_SO_NUMBER') else None,
-
+            mission_dict['SOnumber'] = project.get('fields').get('PROJET_SO_NUMBER')
         # Remove leading zeroes from SOnumbers
         if mission_dict['SOnumber']:
             mission_dict['SOnumber'] = mission_dict['SOnumber'].lstrip('0')
