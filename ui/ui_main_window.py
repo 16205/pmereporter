@@ -7,7 +7,6 @@
 
 from PyQt6 import QtCore, QtGui, QtWidgets
 from PyQt6.QtCore import QDate
-from PyQt6.QtWidgets import QLabel, QHBoxLayout, QVBoxLayout, QPushButton, QTableView, QStatusBar, QApplication, QMainWindow, QDateEdit
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
