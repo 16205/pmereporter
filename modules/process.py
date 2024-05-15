@@ -43,7 +43,7 @@ def generate_pdfs(missions:dict, sources:dict, keys:list=None):
 
         # Add content:
         # -----------Title-----------
-        elements.append(Paragraph(f"Mission order n° {mission.get('key')} - Vinçotte NDT", styles['Title']))
+        elements.append(Paragraph(f"Mission order n°{mission.get('key')} - Vinçotte NDT", styles['Title']))
         elements.append(Spacer(1, 10))
 
         # ------------------------------------- Mission details -------------------------------------
@@ -551,6 +551,10 @@ def clean_data(missions):
         # Remove leading zeroes from SOnumbers
         if mission_dict['SOnumber']:
             mission_dict['SOnumber'] = mission_dict['SOnumber'].lstrip('0')
+
+        # Convert mission key and mission SOnumber to string
+        mission_dict['key'] = str(mission_dict['key'])
+        mission_dict['SOnumber'] = str(mission_dict['SOnumber']) if mission_dict['SOnumber'] else None
 
         # Check if ADR return
         if mission_dict['departurePlace']:
