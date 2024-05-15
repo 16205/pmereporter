@@ -1,7 +1,7 @@
 from PyQt6 import QtWidgets
 from PyQt6.QtGui import QStandardItemModel, QStandardItem, QColor
 from PyQt6.QtCore import QThread, pyqtSignal, Qt
-from PyQt6.QtWidgets import QProgressDialog, QMessageBox
+from PyQt6.QtWidgets import QProgressDialog, QMessageBox, QStyledItemDelegate, QApplication, QStyle, QStyleOptionButton
 from datetime import datetime
 import json
 import os
@@ -12,6 +12,37 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from ui.ui_main_window import Ui_MainWindow
 import main
 from modules import utils
+
+# class CenterCheckboxDelegate(QStyledItemDelegate):
+#     def paint(self, painter, option, index):
+#         if index.column() == 0:  # Assuming the checkboxes are in the first column
+#             value = index.data(Qt.ItemDataRole.CheckStateRole)
+#             opt = QStyleOptionButton()
+#             opt.state = QStyle.StateFlag.State_Enabled
+#             if value == Qt.CheckState.Checked:
+#                 opt.state |= QStyle.StateFlag.State_On
+#             else:
+#                 opt.state |= QStyle.StateFlag.State_Off
+
+#             # Checkbox dimensions and positioning
+#             opt.rect = option.rect
+#             checkbox_size = QApplication.style().pixelMetric(QStyle.PixelMetric.PM_IndicatorWidth)
+#             opt.rect.setLeft(option.rect.center().x() - checkbox_size // 2)
+
+#             # Draw the checkbox using the default style
+#             QApplication.style().drawControl(QStyle.ControlElement.CE_CheckBox, opt, painter, None)
+#         else:
+#             super().paint(painter, option, index)
+
+#     def editorEvent(self, event, model, option, index):
+#         if event.type() == event.Type.MouseButtonRelease and index.column() == 0:
+#             # Toggle the checkbox state
+#             if index.data(Qt.ItemDataRole.CheckStateRole) == Qt.CheckState.Checked:
+#                 model.setData(index, Qt.CheckState.Unchecked, Qt.ItemDataRole.CheckStateRole)
+#             else:
+#                 model.setData(index, Qt.CheckState.Checked, Qt.ItemDataRole.CheckStateRole)
+#             return True
+#         return super().editorEvent(event, model, option, index)
 
 class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def __init__(self, parent=None):
@@ -87,6 +118,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.apply_styleSheet(self.missionTableView)
 
         self.missionTableView.verticalHeader().setDefaultAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        # # Apply the custom delegate to center checkboxes
+        # checkbox_delegate = CenterCheckboxDelegate()
+        # self.missionTableView.setItemDelegateForColumn(0, checkbox_delegate)
 
     def setupSentTable(self):
         # Initialize the model for tableView
@@ -339,11 +374,13 @@ class MissionTableModel(QStandardItemModel):
 
     def setupInitialData(self):
         # Initial setup for the 'Select All' checkbox
-        self.insertRow(0, [QStandardItem()])
-        self.item(0, 0).setCheckable(True)
-        self.item(0, 0).setCheckState(Qt.CheckState.Checked)
+        select_all_item = QStandardItem()
+        select_all_item.setCheckable(True)
+        select_all_item.setCheckState(Qt.CheckState.Checked)
+        self.insertRow(0, [select_all_item])
 
     def flags(self, index):
+        # Standard flags setup, with non-selectable first row
         if index.row() == 0:
             return super().flags(index) & ~Qt.ItemFlag.ItemIsSelectable
         return super().flags(index) | Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled
@@ -354,6 +391,7 @@ class MissionTableModel(QStandardItemModel):
         return super().data(index, role)
 
     def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
+        # Managing check state and updating all checkboxes based on 'Select All'
         if index.row() == 0 and index.column() == 0 and role == Qt.ItemDataRole.CheckStateRole:
             self.checkState = value
             self.toggleAllCheckboxes(value)
@@ -362,6 +400,7 @@ class MissionTableModel(QStandardItemModel):
         return super().setData(index, value, role)
 
     def toggleAllCheckboxes(self, state):
+        # Applying check state to all checkboxes in column 0
         for row in range(1, self.rowCount()):  # Skip the first row
             index = self.index(row, 0)
             super().setData(index, state, Qt.ItemDataRole.CheckStateRole)
