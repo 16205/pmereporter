@@ -1,12 +1,15 @@
+import auth
 import base64
+import os
 import requests
+from dotenv import load_dotenv
 
-def send_email(access_token:str, subject:str, recipients:list, content:str, file_path:str=None):
+def send_email(subject:str, recipients:list, content:str, file_path:str=None):
+    load_dotenv(override=True)
+    
     # Constants
+    access_token = os.environ.get('MS_ACCESS_TOKEN')
     SENDMAIL_ENDPOINT = 'https://graph.microsoft.com/v1.0/me/sendMail'
-
-    if access_token is None or access_token == "":
-        raise ValueError("Access token is not provided.")
     
     headers = {
         'Authorization': f'Bearer {access_token}',
@@ -49,8 +52,14 @@ def send_email(access_token:str, subject:str, recipients:list, content:str, file
         })
     
     # Send the email
-    response = requests.post(SENDMAIL_ENDPOINT, headers=headers, json=email_data)
-    if response.status_code == 202:
-        return
-    else:
-        raise ValueError(f"Failed to send email to {[recipient for recipient in recipients]}. {response.status_code} {response.reason}")
+    try:
+        response = requests.post(SENDMAIL_ENDPOINT, headers=headers, json=email_data)
+        response.raise_for_status()
+    except requests.exceptions.HTTPError:
+        try:
+            access_token = auth.refresh_access_token()
+            headers['Authorization'] = f'Bearer {access_token}'
+            response = requests.post(SENDMAIL_ENDPOINT, headers=headers, json=email_data)
+            response.raise_for_status()
+        except Exception as e:
+            raise e(f"Failed to send email to {[recipient for recipient in recipients]}. {response.status_code} {response.reason}")
