@@ -54,13 +54,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         try:
             if os.path.exists(temp_folder):
                 shutil.rmtree(temp_folder)
-                # print("Temporary files deleted.")
             if os.path.exists(generated_folder):
                 shutil.rmtree(generated_folder)
-                # print("Generated files deleted.")
         except Exception as e:
             raise Exception
-            # print(f"Error deleting temporary files: {e}")
 
     def apply_styleSheet(self, table):
         # Add padding for text in cells
@@ -76,7 +73,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def setupMissionTable(self):
         # Initialize the model for tableView
-        self.missionModel = QStandardItemModel(self)
+        self.missionModel = MissionTableModel(self)
         self.missionTableView.setModel(self.missionModel)
 
         # Set the table view to only allow checkbox changes
@@ -84,7 +81,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.missionTableView.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)  # Enable row selection
 
         # Set column headers
-        self.missionHeaders = ['Select', 'Agents', 'Date & time', 'Client', 'SO n°', 'Intervention n°', 'Departure From', 'Location', 'RT Sources']
+        self.missionHeaders = ['Select All', 'Agents', 'Date & time', 'Client', 'SO n°', 'Intervention n°', 'Departure From', 'Location', 'RT Sources']
         self.missionModel.setHorizontalHeaderLabels(self.missionHeaders)
 
         self.apply_styleSheet(self.missionTableView)
@@ -108,37 +105,40 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.sentElementsTableView.verticalHeader().hide()
 
     def handleMissionDoubleClick(self, index):
-        # Extract the mission key from the selected row
-        mission_key = self.missionModel.item(index.row(), 5).text()  # Assuming column 5 has the mission key
-        mission = None
-        with open('temp/missions.json', 'r') as file:
-            missions = json.load(file)
-        for data in missions:  # Assuming you store mission data somewhere accessible
-            if data['key'] == mission_key:
-                mission = data
-                break
-        
-        if mission:
-            names = ""
-            for resource in mission.get('resources'):
-                names += resource['lastName'] + " " + resource['firstName'] + " - "
-            mission_start = datetime.strptime(mission['start'], '%Y-%m-%d %H:%M:%S')
-
-            day_missions = mission_start.strftime('%Y%m%d')  # Format the date
-            pdf_path = f"./generated/{day_missions}/{names}{mission['key']}.pdf"
+        if index.row() != 0:
+            # Extract the mission key from the selected row
+            mission_key = self.missionModel.item(index.row(), 5).text()  # Assuming column 5 has the mission key
+            mission = None
+            with open('temp/missions.json', 'r') as file:
+                missions = json.load(file)
+            for data in missions:  # Assuming you store mission data somewhere accessible
+                if data['key'] == mission_key:
+                    mission = data
+                    break
             
-            if os.path.exists(pdf_path):
-                # Open the PDF if it exists
-                subprocess.Popen([pdf_path], shell=True)
-            else:
-                # Show message box if the PDF does not exist
-                QMessageBox.information(self, "PDF Not Found", "Please first generate the PDF.")
+            if mission:
+                names = ""
+                for resource in mission.get('resources'):
+                    names += resource['lastName'] + " " + resource['firstName'] + " - "
+                mission_start = datetime.strptime(mission['start'], '%Y-%m-%d %H:%M:%S')
+
+                day_missions = mission_start.strftime('%Y%m%d')  # Format the date
+                pdf_path = f"./generated/{day_missions}/{names}{mission['key']}.pdf"
+                
+                if os.path.exists(pdf_path):
+                    # Open the PDF if it exists
+                    subprocess.Popen([pdf_path], shell=True)
+                else:
+                    # Show message box if the PDF does not exist
+                    QMessageBox.information(self, "PDF Not Found", "Please first generate the PDF.")
 
     # ------------------ Functions that interact with the GUI ------------------
 
     def load_data_to_mission_table(self, file_path, conflicts=None):
         # Clear existing data from the model
         self.missionModel.clear()
+
+        self.missionModel.setupInitialData() # Reinitialize the "Select all"
 
         # Load JSON data from a file
         with open(file_path, 'r') as file:
@@ -182,20 +182,21 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             self.missionTableView.resizeColumnsToContents()
             for row in range(self.missionModel.rowCount()):
                 self.missionTableView.setRowHeight(row, 60)
+        
+        # Additional setup for row height, etc.
+        self.missionTableView.setRowHeight(0, 10)  # Set a fixed height for the 'Select All' row
 
         # Highlight rows containing conflicts...
         if conflicts:
             self.highlight_conflict_rows(conflicts)
 
-
     def get_selected_items(self):
         selected_items = []
-        for row in range(self.missionModel.rowCount()):
+        for row in range(1, self.missionModel.rowCount()):
             if self.missionModel.item(row, 0).checkState() == Qt.CheckState.Checked:
                 mission_key = self.missionModel.item(row, 5).text()  # Assuming the mission key is in the sixth column
                 selected_items.append(mission_key)
         return selected_items
-
     def show_conflict_results(self, result_info):
         if result_info['data']:
             # There are conflicts, show the detailed message and update the table
@@ -217,15 +218,14 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         # Call this method after data is loaded into the table
         self.assign_colors_to_conflicts(conflicts)
         for row in range(self.missionModel.rowCount()):
-            item_key = self.missionModel.item(row, 5).text()  # Assuming key is in the sixth column
-            for source, missions in conflicts.items():
-                if item_key in missions:
-                    color = QColor(self.conflict_colors[source])
-                    for col in range(self.missionModel.columnCount()):
-                        item = self.missionModel.item(row, col)
-                        item.setBackground(color)
-                        # Set style for each item individually
-                        # item.setData('background-color: %s;' % color.name())
+            if row != 0:
+                item_key = self.missionModel.item(row, 5).text()  # Assuming key is in the sixth column
+                for source, missions in conflicts.items():
+                    if item_key in missions:
+                        color = QColor(self.conflict_colors[source])
+                        for col in range(self.missionModel.columnCount()):
+                            item = self.missionModel.item(row, col)
+                            item.setBackground(color)
 
     def load_data_to_sent_table(self, file_path):
         self.sentModel.clear()
@@ -331,6 +331,40 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.current_task = 'sync_sent_elements'
         self.message = 'Syncing sent elements'
         self.start_thread(self.current_task, self.message)
+
+class MissionTableModel(QStandardItemModel):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.checkState = Qt.CheckState.Checked
+
+    def setupInitialData(self):
+        # Initial setup for the 'Select All' checkbox
+        self.insertRow(0, [QStandardItem()])
+        self.item(0, 0).setCheckable(True)
+        self.item(0, 0).setCheckState(Qt.CheckState.Checked)
+
+    def flags(self, index):
+        if index.row() == 0:
+            return super().flags(index) & ~Qt.ItemFlag.ItemIsSelectable
+        return super().flags(index) | Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled
+
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
+        if index.row() == 0 and index.column() == 0 and role == Qt.ItemDataRole.CheckStateRole:
+            return self.checkState
+        return super().data(index, role)
+
+    def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
+        if index.row() == 0 and index.column() == 0 and role == Qt.ItemDataRole.CheckStateRole:
+            self.checkState = value
+            self.toggleAllCheckboxes(value)
+            self.dataChanged.emit(index, index, [role])  # Important to update the view
+            return True
+        return super().setData(index, value, role)
+
+    def toggleAllCheckboxes(self, state):
+        for row in range(1, self.rowCount()):  # Skip the first row
+            index = self.index(row, 0)
+            super().setData(index, state, Qt.ItemDataRole.CheckStateRole)
 
 # ------------------ Worker object ------------------
 
