@@ -1,13 +1,11 @@
 from datetime import datetime
 from dotenv import load_dotenv
-from modules import auth, outbound, utils
-from tqdm import tqdm
+from modules import outbound, utils
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_JUSTIFY
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Spacer, PageBreak
-from requests.exceptions import HTTPError
 import os
 import re
 import sys
