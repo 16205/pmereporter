@@ -1,8 +1,8 @@
-import auth
+from dotenv import load_dotenv
+from modules import auth
 import base64
 import os
 import requests
-from dotenv import load_dotenv
 
 def send_email(subject:str, recipients:list, content:str, file_path:str=None):
     load_dotenv(override=True)
