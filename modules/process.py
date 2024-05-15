@@ -1,5 +1,4 @@
 from datetime import datetime
-from dotenv import load_dotenv
 from modules import outbound, utils
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_JUSTIFY
