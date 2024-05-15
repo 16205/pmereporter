@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from modules import auth, ingest, process, utils
 
-date = datetime(2023, 12, 14)
+date = datetime(2023, 11, 21)
 # dateTo = datetime(2023, 11, 21, 23, 59, 59, 999)
 
 def fetch_and_store(date:datetime = None, departments:list=None, progress_callback=None):
