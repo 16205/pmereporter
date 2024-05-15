@@ -420,39 +420,51 @@ def add_header_footer(canvas, doc):
     
     canvas.restoreState()
 
-def check_sources_double_bookings(missions:list) -> dict:
+def check_sources_double_bookings(missions: list) -> dict:
     """
-    This function iterates over a list of missions and stores in a dictionary all sources that are present in more than one mission.
-    It then returns a dictionary of sources that are present in more than one mission, along with a list of the missions in which they are present.
+    This function iterates over a list of missions and identifies sources that are booked during overlapping times.
+    It returns a dictionary with sources as keys and the list of mission keys during which overlaps occur as values.
 
     Parameters:
-    missions (list): A list of mission dictionaries. Each dictionary must contain a 'sources' key, which is a list of source dictionaries.
+    missions (list): A list of mission dictionaries. Each dictionary must contain a 'sources' key, which is a list of sources,
+                     and 'start' and 'end' keys with datetime strings.
 
     Returns:
-    double_bookings (dict): A dictionary of sources that are present in more than one mission, along with a list of the missions in which they are present.
+    double_bookings (dict): A dictionary of sources with overlapping bookings, along with the mission keys where these overlaps occur.
     """
     booked_sources = {}
 
     # Iterate over all missions
     for mission in missions:
-        sources = []
-        sources = mission.get('sources')
+        sources = mission.get('sources', [])
+        mission_start = datetime.strptime(mission['start'], '%Y-%m-%d %H:%M:%S')
+        mission_end = datetime.strptime(mission['end'], '%Y-%m-%d %H:%M:%S')
 
-        # Store any not None sources in booked_sources
-        if any(sources):
-            for s in sources:
-                if s in booked_sources.keys():
-                    booked_sources[s].append(mission.get('key'))
-                else:
-                    booked_sources[s] = [mission.get('key')]
+        # Store sources with their respective mission keys and timings
+        for source in sources:
+            if source not in booked_sources:
+                booked_sources[source] = []
+            booked_sources[source].append({'key': mission['key'], 'start': mission_start, 'end': mission_end})
 
     # Check for double bookings in booked_sources
     double_bookings = {}
-    for source in booked_sources:
-        if len(booked_sources[source]) > 1:
-            double_bookings[source] = booked_sources[source]
+    for source, entries in booked_sources.items():
+        if len(entries) > 1:
+            # Check for overlapping times
+            for i in range(len(entries)):
+                for j in range(i + 1, len(entries)):
+                    if entries[i]['end'] > entries[j]['start'] and entries[i]['start'] < entries[j]['end']:
+                        if source not in double_bookings:
+                            double_bookings[source] = []
+                        double_bookings[source].extend([entries[i]['key'], entries[j]['key']])
+                        break
+
+    # Remove duplicate mission keys in the results
+    for source in double_bookings:
+        double_bookings[source] = list(set(double_bookings[source]))
 
     return None if not double_bookings else double_bookings
+
 
 def send_om(missions:dict, keys:list[str], progress_callback=None):
     load_dotenv(override=True)
