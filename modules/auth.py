@@ -155,12 +155,12 @@ def authenticate_to_ms_graph():
         if result and 'access_token' in result and 'refresh_token' in result:
             update_token_env(result['access_token'], 'MS_ACCESS_TOKEN')
             update_token_env(result['refresh_token'], 'MS_REFRESH_TOKEN')
-            print('Token acquired')
-            return result['access_token']
+            # print('Token acquired')
+            return result
         else:
-            print('Failed to acquire token:', result.get('error_description'))
+            raise Exception('Failed to acquire token:', result.get('error_description'))
     else:
-        print('No authorization code was received.')
+        raise Exception('No authorization code was received.')
 
 def refresh_access_token():
     """
@@ -192,9 +192,12 @@ def refresh_access_token():
         "client_secret": CLIENT_SECRET,
         "scope": "https://graph.microsoft.com/.default offline_access"
     }
-    response = requests.post(token_url, headers=headers, data=body)
-    response.raise_for_status()
-    new_tokens = response.json()
-    update_token_env(new_tokens.get('access_token'), 'MS_ACCESS_TOKEN')
-    update_token_env(new_tokens.get('refresh_token'), 'MS_REFRESH_TOKEN')
+    try:
+        response = requests.post(token_url, headers=headers, data=body)
+        response.raise_for_status()
+        new_tokens = response.json()
+        update_token_env(new_tokens.get('access_token'), 'MS_ACCESS_TOKEN')
+        update_token_env(new_tokens.get('refresh_token'), 'MS_REFRESH_TOKEN')
+    except requests.exceptions.HTTPError:
+        new_tokens = authenticate_to_ms_graph()
     return new_tokens['access_token']
