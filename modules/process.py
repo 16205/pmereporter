@@ -7,6 +7,7 @@ from reportlab.lib.enums import TA_JUSTIFY
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Spacer, PageBreak
+from requests.exceptions import HTTPError
 import os
 import re
 import sys
@@ -467,8 +468,6 @@ def check_sources_double_bookings(missions: list) -> dict:
 
 
 def send_om(missions:dict, keys:list[str], progress_callback=None):
-    load_dotenv(override=True)
-    access_token = os.environ.get('MS_ACCESS_TOKEN')
     # print("Sending mission orders...")
 
     # Variables for process tracking
@@ -503,15 +502,7 @@ def send_om(missions:dict, keys:list[str], progress_callback=None):
             recipients_str += recipient + ",\n"
         recipients_str += "]"
         
-        try: 
-            outbound.send_email(access_token, f"Mission order n°{number} - {intervention_date}", ['glohest@vincotte.be'], content+recipients_str, attachment_path)
-        except ValueError:
-            try:
-                access_token = auth.refresh_access_token()
-                outbound.send_email(access_token, f"Mission order n°{number} - {intervention_date}", ['glohest@vincotte.be'], content+recipients_str, attachment_path)
-            except ValueError:
-                access_token = auth.authenticate_to_ms_graph()
-                outbound.send_email(access_token, f"Mission order n°{number} - {intervention_date}", ['glohest@vincotte.be'], content+recipients_str, attachment_path)
+        outbound.send_email(f"Mission order n°{number} - {intervention_date}", ['glohest@vincotte.be'], content+recipients_str, attachment_path)
         
         # Update processed count and emit progress
         processed_count += 1
@@ -524,8 +515,6 @@ def send_om(missions:dict, keys:list[str], progress_callback=None):
 def clean_data(missions):
     missions_cleaned = []
     for mission in missions['items']:
-        
-        
         # Initialize each mission with defaults
         mission_dict = {
             "key": mission.get('key'),
