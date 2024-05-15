@@ -50,6 +50,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.setupUi(self)
         self.showMaximized()  # This line maximizes the window on startup
         self.setupMissionTable() # Initialize the model for Mission tableView
+        self.setupDepartmentTable() # Initialize the model for Department tableView
         self.setupSentTable() # Initialize the model for Sent Elements tableView
         self.current_task = None  # Add a variable to track the current task
         self.message = None # The message to display when the task is ongoing
@@ -128,10 +129,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.sentModel = QStandardItemModel(self)
         self.sentElementsTableView.setModel(self.sentModel)
 
-        # Set the table view to only allow checkbox changes
-        self.sentElementsTableView.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)  # Disable text editing
-        self.sentElementsTableView.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)  # Enable row selection
-
         self.sentHeaders = ['Recipients', 'Subject', 'Sent Time']
         self.sentModel.setHorizontalHeaderLabels(self.sentHeaders)
 
@@ -169,6 +166,34 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
     # ------------------ Functions that interact with the GUI ------------------
 
+    def setupDepartmentTable(self):
+        # Initialize the model for tableView
+        self.departmentModel = QStandardItemModel(self)
+        self.departmentTableView.setModel(self.departmentModel)
+
+        self.departmentHeaders = ['', 'Department']
+        self.departmentModel.setHorizontalHeaderLabels(self.departmentHeaders)
+
+        # self.apply_styleSheet(self.departmentTableView)
+        self.departmentTableView.verticalHeader().hide()
+
+        # Set the department table to only allow checkbox changes
+        self.departmentTableView.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)  # Disable text editing
+        self.departmentTableView.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.NoSelection)  # Disable row selection
+
+        def create_checkbox():
+            checkbox_item = QStandardItem()
+            checkbox_item.setCheckable(True)
+            checkbox_item.setCheckState(Qt.CheckState.Checked)
+            return checkbox_item
+
+        self.departmentModel.appendRow([create_checkbox(), QStandardItem("North")])
+        self.departmentModel.appendRow([create_checkbox(), QStandardItem("South")])
+
+        # Resize columns and rows
+        self.departmentTableView.resizeColumnsToContents()
+        self.departmentTableView.resizeRowsToContents()
+ 
     def load_data_to_mission_table(self, file_path, conflicts=None):
         # Clear existing data from the model
         self.missionModel.clear()
@@ -225,13 +250,19 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         if conflicts:
             self.highlight_conflict_rows(conflicts)
 
-    def get_selected_items(self):
+    def get_selected_items(self, table):
         selected_items = []
-        for row in range(1, self.missionModel.rowCount()):
-            if self.missionModel.item(row, 0).checkState() == Qt.CheckState.Checked:
-                mission_key = self.missionModel.item(row, 5).text()  # Assuming the mission key is in the sixth column
-                selected_items.append(mission_key)
+        if table == "missions":
+            for row in range(1, self.missionModel.rowCount()):
+                if self.missionModel.item(row, 0).checkState() == Qt.CheckState.Checked:
+                    mission_key = self.missionModel.item(row, 5).text()  # Assuming the mission key is in the sixth column
+                    selected_items.append(mission_key)
+        elif table == "departments":
+            for row in range(self.departmentModel.rowCount()):
+                if self.departmentModel.item(row, 0).checkState() == Qt.CheckState.Checked:
+                    selected_items.append(self.departmentModel.item(row, 1).text())
         return selected_items
+                
     def show_conflict_results(self, result_info):
         if result_info['data']:
             # There are conflicts, show the detailed message and update the table
@@ -333,14 +364,16 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def fetch_data(self):
         # Get the date from the dateSelector
         selected_date = self.dateSelector.date().toPyDate()  # Converts QDate to Python date
+        departments = self.get_selected_items("departments") # Get departments
+        print(departments)
 
         self.current_task = 'fetch_and_store'  # Set the current task
         self.message = 'Data loading'
 
-        self.start_thread(self.current_task, self.message, selected_date)
+        self.start_thread(self.current_task, self.message, selected_date, departments)
 
     def generate_mission_orders(self):
-        selected_keys = self.get_selected_items()
+        selected_keys = self.get_selected_items("missions")
         if not selected_keys:
             QtWidgets.QMessageBox.warning(self, "No Selection", "Please select at least one mission order to generate.")
             return
@@ -349,7 +382,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.start_thread(self.current_task, self.message, selected_keys)
 
     def send_mission_orders(self):
-        selected_keys = self.get_selected_items()
+        selected_keys = self.get_selected_items("missions")
         if not selected_keys:
             QtWidgets.QMessageBox.warning(self, "No Selection", "Please select at least one mission order to send.")
             return
@@ -422,7 +455,7 @@ class Worker(QThread):
         if self.task_type == 'fetch_and_store':
             main.fetch_and_store(*self.args, progress_callback=self.handle_progress, **self.kwargs)
         elif self.task_type == 'generate':
-            main.generate(*self.args, **self.kwargs)
+            main.generate(*self.args, progress_callback=self.handle_progress, **self.kwargs)
         elif self.task_type == 'send':
             main.send(*self.args, progress_callback=self.handle_progress, **self.kwargs)
         elif self.task_type == 'check_sources_conflicts':

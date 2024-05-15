@@ -17,14 +17,20 @@ def fetch_and_store(date:datetime = None, departments:list=None, progress_callba
     dateFrom = date
     dateTo = datetime.combine(dateFrom, time(23, 59, 59, 999))
 
+    depts = []
+    if "North" in departments:
+        depts.extend([25, 27, 29, 33, 35, 37, 37, 40, 42, 44, 50, 52, 54, 64, 65, 75, 76])
+    elif "South" in departments:
+        depts.extend([26, 28, 30, 34, 36, 38, 41, 43, 45, 51, 53, 55])
+
     try:
-        missions = ingest.get_events(dateFrom, dateTo, departments=[30])
+        missions = ingest.get_events(dateFrom, dateTo, depts)
         current_progress += 5  # 5% progress after fetching events
         if progress_callback:
             progress_callback(current_progress)
     except Exception:
         auth.authenticate_to_ppme()
-        missions = ingest.get_events(dateFrom, dateTo, departments=[30])
+        missions = ingest.get_events(dateFrom, dateTo, depts)
         current_progress += 5  # Repeat increment if re-authentication and fetching events
         if progress_callback:
             progress_callback(current_progress)
@@ -58,7 +64,7 @@ def fetch_and_store(date:datetime = None, departments:list=None, progress_callba
         progress_callback(100)  # Ensure completion is signaled correctly
 
 
-def generate(keys:list[str]):
+def generate(keys:list[str], progress_callback):
     """
     Generates PDFs based on the missions and sources data stored in JSON files.
     
@@ -74,6 +80,9 @@ def generate(keys:list[str]):
     Returns:
     - None. This function does not return any value but triggers the PDF generation process.
     """
+    if progress_callback:
+        progress_callback(0)  # Start with 0% progress
+
     with open('temp/missions.json', 'r') as file1, \
          open('temp/sources.json', 'r') as file2:
         missions = json.load(file1)
@@ -81,6 +90,9 @@ def generate(keys:list[str]):
 
     # Feed data into process.generate_pdfs() to generate PDF documents containing the missions details
     process.generate_pdfs(missions, sources, keys)    
+
+    if progress_callback:
+        progress_callback(100)  # Ensure completion is signaled correctly
 
 def send(keys:list[str], progress_callback=None):
     if progress_callback:
@@ -112,7 +124,7 @@ def get_sent_elements():
             access_token = auth.authenticate_to_ms_graph()
             utils.save_to_json('temp/sentElements.json', ingest.get_sent_elements(access_token))
             
-# fetch_and_store(date)
+# fetch_and_store(date, ['North', 'South'])
 # generate(None)
 # send(None)
 # check_sources_conflicts()

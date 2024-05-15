@@ -83,7 +83,7 @@ class Ui_MainWindow(object):
         self.departmentVerticalLayout.addWidget(self.titleLabel)
         # Department tableView selector
         self.departmentTableView = QtWidgets.QTableView()
-        self.departmentTableView.setFixedHeight(60)
+        self.departmentTableView.setFixedHeight(90)
         self.departmentVerticalLayout.addWidget(self.departmentTableView)
         self.rightVerticalLayout.addLayout(self.departmentVerticalLayout)
 
