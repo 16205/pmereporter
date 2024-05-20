@@ -19,9 +19,9 @@ def fetch_and_store(date:datetime = None, departments:list=None, progress_callba
 
     depts = []
     if "North" in departments:
-        depts.extend([25, 27, 29, 33, 35, 37, 37, 40, 42, 44, 50, 52, 54, 64, 65, 75, 76])
-    elif "South" in departments:
-        depts.extend([26, 28, 30, 34, 36, 38, 41, 43, 45, 51, 53, 55])
+        depts.extend([2, 3, 4, 19])
+    if "South" in departments:
+        depts.extend([5, 6, 7, 8, 9, 10, 11])
 
     try:
         missions = ingest.get_events(dateFrom, dateTo, depts)
@@ -34,6 +34,8 @@ def fetch_and_store(date:datetime = None, departments:list=None, progress_callba
         current_progress += 5  # Repeat increment if re-authentication and fetching events
         if progress_callback:
             progress_callback(current_progress)
+    
+    utils.save_to_json('temp/missions_raw.json', missions) # Debug
 
     missions = process.clean_data(missions)
     current_progress += 5  # Increment by 5% after cleaning data
