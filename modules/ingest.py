@@ -27,7 +27,7 @@ def init_ppme_api_variables():
     return connection_str, headers
 
 def get_events(dateFrom:datetime, dateTo:datetime=None, departments:list=None, resources:list=None, 
-               categories:list=[52,60,63,65,80]):
+               categories:list=[52,55,60,63,65,66,76,77,81,82]):
     """
     Fetches events from the PlanningPME API within a specified date range and optional filters.
 
@@ -58,10 +58,10 @@ def get_events(dateFrom:datetime, dateTo:datetime=None, departments:list=None, r
     json = {
         "dateFrom": dateFrom,
         "dateTo": dateTo,
-        "departments": departments,
         "resources": resources,
         "categories": categories,
-        "results": "Task"
+        "results": "Task",
+        "tasks": departments,
     }
     # TODO: calculate datetime 1 day diff
     # TODO: use kwargs
