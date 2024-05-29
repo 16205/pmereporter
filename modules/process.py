@@ -89,11 +89,15 @@ def generate_pdfs(missions:dict, sources:dict, keys:list=None):
         elif mission.get('location') and mission.get('location') != 'None': 
             location = utils.format_text(mission.get('location'))
             mission_table_data.append([Paragraph("<b>Intervention location</b>"), Paragraph(f"{location}")])
+        else:
+            location = "" # Set location to empty string for use in ADR sender/receiver information, so that "None" is not displayed
 
         # -----------Departure location-----------
         departureplace = mission.get('departurePlace')
         if departureplace:
             mission_table_data.append([Paragraph("<b>Departure location</b>"), Paragraph(f"{departureplace}")])
+        else:
+            departureplace = "" # Set departure place to empty string for use in ADR sender/receiver information, so that "None" is not displayed
 
         # -----------Info/comments-----------
         comments = mission.get('comments')
@@ -184,11 +188,11 @@ def generate_pdfs(missions:dict, sources:dict, keys:list=None):
                 s_r_table_data.append([Paragraph("<b>Verzender / Expéditeur</b>"),
                                    Paragraph("<b>Bestemmeling / Destinataire</b>")])
                 if mission.get('return') == True:
-                    s_r_table_data.append([Paragraph(f"{client_name}<br/>{mission['location']}"),
+                    s_r_table_data.append([Paragraph(f"{client_name}<br/>{location}"),
                                             Paragraph(f"Vinçotte NV<br/><br/>{addresses.get(departureplace)}")])
                 else:
                     s_r_table_data.append([Paragraph(f"Vinçotte NV<br/><br/>{addresses.get(departureplace)}"),
-                                            Paragraph(f"{client_name}<br/>{mission['location']}")])
+                                            Paragraph(f"{client_name}<br/>{location}")])
                 s_r_table = Table(s_r_table_data)
                 s_r_table.setStyle(style)
                 elements.append(s_r_table)
@@ -198,7 +202,7 @@ def generate_pdfs(missions:dict, sources:dict, keys:list=None):
                 s_r_table_data.append([Paragraph("<b>Verzender / Expéditeur</b>"),
                                    Paragraph("<b>Bestemmeling / Destinataire</b>")])
                 s_r_table_data.append([Paragraph(f"Vinçotte NV<br/><br/>{addresses.get(departureplace)}"),
-                                        Paragraph(f"{client_name}<br/>{mission['location']}")])
+                                        Paragraph(f"{client_name}<br/>{location}")])
                 
                 s_r_table = Table(s_r_table_data)
                 s_r_table.setStyle(style)
@@ -208,7 +212,7 @@ def generate_pdfs(missions:dict, sources:dict, keys:list=None):
                 s_r_table_data = []
                 s_r_table_data.append([Paragraph("<b>Verzender / Expéditeur</b>"),
                                    Paragraph("<b>Bestemmeling / Destinataire</b>")])
-                s_r_table_data.append([Paragraph(f"{client_name}<br/>{mission['location']}"),
+                s_r_table_data.append([Paragraph(f"{client_name}<br/>{location}"),
                                         Paragraph(f"Vinçotte NV<br/><br/>{addresses.get(departureplace)}")])
                 
                 s_r_table = Table(s_r_table_data)
