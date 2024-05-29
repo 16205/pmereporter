@@ -85,7 +85,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.fetchButton.clicked.connect(self.fetch_data)
         self.genButton.clicked.connect(self.generate_mission_orders)
         self.sendButton.clicked.connect(self.send_mission_orders)
-        self.checkSources.clicked.connect(self.check_source_conflicts)
         self.syncButton.clicked.connect(self.sync_sent_elements)
         self.missionTableView.doubleClicked.connect(self.handleMissionDoubleClick)
 
@@ -289,14 +288,13 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         for row in range(self.missionModel.rowCount()):
             self.missionModel.item(row, 0).setCheckState(state)
                 
-    def show_conflict_results(self, result_info):
-        if result_info['data']:
-            # There are conflicts, show the detailed message and update the table
-            self.load_data_to_mission_table("./temp/missions.json", result_info['data'])
-            QtWidgets.QMessageBox.information(self, "Conflict Results", result_info['message'])
-        else:
-            # No conflicts, just show the message
-            QtWidgets.QMessageBox.information(self, "Conflict Results", result_info['message'])
+    def show_conflict_results(self, conflicts):
+        # There are conflicts, show the detailed message and update the table
+        self.load_data_to_mission_table("./temp/missions.json", conflicts)
+        sources = "\n".join(f"• {key}" for key in conflicts.keys())
+        message = f"The following sources are booked several times:\n{sources}\nCheck missions overview for more information"
+        QtWidgets.QMessageBox.warning(self, "Conflicts found!", message)
+        
 
     def assign_colors_to_conflicts(self, conflicts):
         # Assign a unique color for each source
@@ -358,10 +356,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.thread.progress_updated.connect(self.update_progress)  # Connect progress update signal
         self.thread.finished.connect(self.task_finished)  # Connect the finished signal
         
-        # Only connect the result_ready signal for the check_sources_conflicts task
-        if task_type == 'check_sources_conflicts':
-            self.thread.result_ready.connect(self.show_conflict_results)
-        
         self.progress_dialog = QProgressDialog(f"Please wait, {message.lower()}...", "Cancel", 0, 100, self)
         self.progress_dialog.setWindowTitle(f"{message}")
         self.progress_dialog.setModal(True)
@@ -376,7 +370,12 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def task_finished(self):
         # Check which task finished and act accordingly
         if self.current_task == 'fetch_and_store':
-            self.load_data_to_mission_table("./temp/missions.json")
+            # After fetching, immediately check for conflicts
+            conflicts = main.check_sources_conflicts()
+            if conflicts:
+                self.show_conflict_results(conflicts)
+            else:
+                self.load_data_to_mission_table("./temp/missions.json")
         elif self.current_task == 'sync_sent_elements':
             self.load_data_to_sent_table("./temp/sentElements.json")
         self.progress_dialog.setValue(100)  # Update progress dialog to show completion
@@ -437,16 +436,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.message = 'Mission orders sending'
         self.start_thread(self.current_task, self.message, selected_keys)
 
-    def check_source_conflicts(self):
-        # Check if the missions file exists
-        missions_file_path = 'temp/missions.json'
-        if not os.path.exists(missions_file_path):
-            QtWidgets.QMessageBox.warning(self, "No Data", "Please first fetch mission data.")
-            return
-        self.current_task = 'check_sources_conflicts'
-        self.message = 'Source conflicts'
-        self.start_thread(self.current_task, self.message)
-
     def sync_sent_elements(self):
         self.current_task = 'sync_sent_elements'
         self.message = 'Syncing sent elements'
@@ -466,7 +455,6 @@ class MissionTableModel(QStandardItemModel):
 class Worker(QThread):
     progress_updated = pyqtSignal(int)
     finished = pyqtSignal()
-    result_ready = pyqtSignal(dict)  # Signal to send back data
 
     def __init__(self, task_type, *args, **kwargs):
         super(Worker, self).__init__()
@@ -481,14 +469,6 @@ class Worker(QThread):
             main.generate(*self.args, progress_callback=self.handle_progress, **self.kwargs)
         elif self.task_type == 'send':
             main.send(*self.args, progress_callback=self.handle_progress, **self.kwargs)
-        elif self.task_type == 'check_sources_conflicts':
-            result = main.check_sources_conflicts(*self.args, **self.kwargs)
-            if result:
-                sources = "\n".join(f"• {key}" for key in result.keys())
-                message = f"The following sources are booked several times:\n{sources}\nCheck missions overview for more information"
-                self.result_ready.emit({'message': message, 'data': result})
-            else:
-                self.result_ready.emit({'message': "No conflicts detected!", 'data': None})
         elif self.task_type =='sync_sent_elements':
             main.get_sent_elements(*self.args, **self.kwargs)
         self.finished.emit()

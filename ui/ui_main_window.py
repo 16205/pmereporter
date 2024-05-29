@@ -88,9 +88,7 @@ class Ui_MainWindow(object):
         self.rightVerticalLayout.addLayout(self.departmentVerticalLayout)
 
         self.fetchButton = QtWidgets.QPushButton("Load Missions")
-        self.checkSources = QtWidgets.QPushButton("Check RT Source Conflicts")
         self.rightVerticalLayout.addWidget(self.fetchButton)
-        self.rightVerticalLayout.addWidget(self.checkSources)
 
         # Align right V Layout elements to top
         self.rightVerticalLayout.addStretch(1)
