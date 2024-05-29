@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from . import auth
 from tqdm import tqdm
 import os
+import pytz
 import requests
 import sys
 
@@ -180,8 +181,15 @@ def get_sources():
         sys.exit(f"Failed to retrieve data. Try again after enabling Cato VPN")
     sources = {}
 
+    utc_zone = pytz.timezone('UTC')
+    brussels_zone = pytz.timezone('Europe/Brussels')
+
     for source in sources_list:
         sources[source.properties['Title']] = source.properties
+        
+        # Convert Calibration Date to UTC+1 (Brussels) to avoid issues with activity computation
+        calibration_date_utc = datetime.strptime(sources[source.properties['Title']]['Calibrationdate'], '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=utc_zone)
+        sources[source.properties['Title']]['Calibrationdate'] = calibration_date_utc.astimezone(brussels_zone).strftime('%Y-%m-%dT%H:%M:%SZ')
 
     # print('Got all sources!')
     return sources
