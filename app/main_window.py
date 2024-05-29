@@ -96,8 +96,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     sys.excepthook = exception_hook
 
     def closeEvent(self, event):
-        # Call your cleanup function here
-        # self.cleanUpFolders()
+        self.cleanUpFolders()
         super().closeEvent(event)
 
     def cleanUpFolders(self):
@@ -410,9 +409,30 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def send_mission_orders(self):
         selected_keys = self.get_selected_items("missions")
+        # Check if any mission orders were selected
         if not selected_keys:
             QtWidgets.QMessageBox.warning(self, "No Selection", "Please select at least one mission order to send.")
             return
+        # Format the date from the date selector
+        selected_date = self.dateSelector.date().toPyDate()
+        formatted_date = selected_date.strftime('%Y%m%d')
+        generated_directory = f'./generated/{formatted_date}/'
+        # Check if the directory exists
+        if not os.path.exists(generated_directory):
+            QtWidgets.QMessageBox.warning(self, "No Data", "Please first generate the mission orders.")
+            return
+        # Check if PDF files for all selected keys exist
+        all_files_exist = True
+        for key in selected_keys:
+            # Check for any file containing the key in its name
+            file_exists = any(key in filename for filename in os.listdir(generated_directory) if filename.endswith('.pdf'))
+            if not file_exists:
+                all_files_exist = False
+                break
+        if not all_files_exist:
+            QtWidgets.QMessageBox.warning(self, "Incomplete Data", "Some selected missions have not been generated yet. Please generate them first.")
+            return
+        # Proceed with sending the missions
         self.current_task = 'send'  # Set the current task
         self.message = 'Mission orders sending'
         self.start_thread(self.current_task, self.message, selected_keys)
