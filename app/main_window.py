@@ -1,7 +1,7 @@
 from PyQt6 import QtWidgets
-from PyQt6.QtGui import QStandardItemModel, QStandardItem, QColor
-from PyQt6.QtCore import QThread, pyqtSignal, Qt
-from PyQt6.QtWidgets import QProgressDialog, QMessageBox, QStyledItemDelegate, QApplication, QStyle, QStyleOptionButton
+from PyQt6.QtGui import QStandardItemModel, QStandardItem, QColor, QPainter, QMouseEvent
+from PyQt6.QtCore import QThread, pyqtSignal, Qt, QRect
+from PyQt6.QtWidgets import QProgressDialog, QMessageBox, QStyledItemDelegate, QApplication, QStyle, QStyleOptionButton, QHeaderView
 from datetime import datetime
 import json
 import os
@@ -13,36 +13,57 @@ from ui.ui_main_window import Ui_MainWindow
 import main
 from modules import utils
 
-# class CenterCheckboxDelegate(QStyledItemDelegate):
-#     def paint(self, painter, option, index):
-#         if index.column() == 0:  # Assuming the checkboxes are in the first column
-#             value = index.data(Qt.ItemDataRole.CheckStateRole)
-#             opt = QStyleOptionButton()
-#             opt.state = QStyle.StateFlag.State_Enabled
-#             if value == Qt.CheckState.Checked:
-#                 opt.state |= QStyle.StateFlag.State_On
-#             else:
-#                 opt.state |= QStyle.StateFlag.State_Off
+class CheckBoxHeader(QHeaderView):
+    checkStateChanged = pyqtSignal(bool)
 
-#             # Checkbox dimensions and positioning
-#             opt.rect = option.rect
-#             checkbox_size = QApplication.style().pixelMetric(QStyle.PixelMetric.PM_IndicatorWidth)
-#             opt.rect.setLeft(option.rect.center().x() - checkbox_size // 2)
+    def __init__(self, orientation, parent=None):
+        super(CheckBoxHeader, self).__init__(orientation, parent)
+        self.isChecked = False
+        self.setSectionsClickable(True)
 
-#             # Draw the checkbox using the default style
-#             QApplication.style().drawControl(QStyle.ControlElement.CE_CheckBox, opt, painter, None)
-#         else:
-#             super().paint(painter, option, index)
+    def paintSection(self, painter, rect, logicalIndex):
+        super(CheckBoxHeader, self).paintSection(painter, rect, logicalIndex)
+        if logicalIndex == 0:  # Draw checkbox only in the first column header
+            option = QStyleOptionButton()
+            checkbox_size = 20  # Adjust size for visibility
+            option.rect = QRect(
+                rect.x() + (rect.width() - checkbox_size) // 2,
+                rect.y() + (rect.height() - checkbox_size) // 2,
+                checkbox_size, checkbox_size
+            )
+            option.state = QStyle.StateFlag.State_Enabled | QStyle.StateFlag.State_Active
+            if self.isChecked:
+                option.state |= QStyle.StateFlag.State_On
+            else:
+                option.state |= QStyle.StateFlag.State_Off
 
-#     def editorEvent(self, event, model, option, index):
-#         if event.type() == event.Type.MouseButtonRelease and index.column() == 0:
-#             # Toggle the checkbox state
-#             if index.data(Qt.ItemDataRole.CheckStateRole) == Qt.CheckState.Checked:
-#                 model.setData(index, Qt.CheckState.Unchecked, Qt.ItemDataRole.CheckStateRole)
-#             else:
-#                 model.setData(index, Qt.CheckState.Checked, Qt.ItemDataRole.CheckStateRole)
-#             return True
-#         return super().editorEvent(event, model, option, index)
+            # print(f"Drawing checkbox at {option.rect}")  # Debug print to verify dimensions
+            painter.save()
+            painter.fillRect(rect, QColor("white"))  # Explicitly set the background color
+            QApplication.style().drawPrimitive(QStyle.PrimitiveElement.PE_IndicatorCheckBox, option, painter)
+            painter.restore()
+
+    def mousePressEvent(self, event):
+        index = self.logicalIndexAt(event.position().toPoint())
+        if index == 0:
+            rect_x = self.sectionViewportPosition(index)
+            rect_width = self.sectionSize(index)
+            checkbox_size = 20  # Adjust size for visibility
+            checkbox_rect = QRect(
+                rect_x + (rect_width - checkbox_size) // 2,
+                (self.height() - checkbox_size) // 2,
+                checkbox_size, checkbox_size
+            )
+            # print(f"Checkbox rect: {checkbox_rect}")  # Debug print to verify dimensions
+            if checkbox_rect.contains(event.position().toPoint()):
+                self.isChecked = not self.isChecked
+                self.updateSection(index)
+                self.checkStateChanged.emit(self.isChecked)
+                event.accept()
+            else:
+                super(CheckBoxHeader, self).mousePressEvent(event)
+        else:
+            super(CheckBoxHeader, self).mousePressEvent(event)
 
 class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def __init__(self, parent=None):
@@ -112,22 +133,28 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.missionTableView.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)  # Disable text editing
         self.missionTableView.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)  # Enable row selection
 
+        # Set custom header view with checkboxes
+        self.CheckboxHeader = CheckBoxHeader(Qt.Orientation.Horizontal, self.missionTableView)
+        self.CheckboxHeader.checkStateChanged.connect(self.toggleAllCheckboxes)  # Connect to model method
+        self.missionTableView.setHorizontalHeader(self.CheckboxHeader)
+
         # Set column headers
-        self.missionHeaders = ['Select All', 'Agents', 'Date & time', 'Client', 'SO n°', 'Intervention n°', 'Departure From', 'Location', 'RT Sources']
+        self.missionHeaders = [None, 'Agents', 'Date & time', 'Client', 'SO n°', 'Intervention n°', 'Departure From', 'Location', 'RT Sources']
         self.missionModel.setHorizontalHeaderLabels(self.missionHeaders)
 
         self.apply_styleSheet(self.missionTableView)
 
+        self.missionTableView.horizontalHeader().setVisible(True)
         self.missionTableView.verticalHeader().setDefaultAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        # # Apply the custom delegate to center checkboxes
-        # checkbox_delegate = CenterCheckboxDelegate()
-        # self.missionTableView.setItemDelegateForColumn(0, checkbox_delegate)
 
     def setupSentTable(self):
         # Initialize the model for tableView
         self.sentModel = QStandardItemModel(self)
         self.sentElementsTableView.setModel(self.sentModel)
+
+        # Set the table view to only allow checkbox changes
+        self.sentElementsTableView.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)  # Disable text editing
+        self.sentElementsTableView.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)  # Enable row selection
 
         self.sentHeaders = ['Recipients', 'Subject', 'Sent Time']
         self.sentModel.setHorizontalHeaderLabels(self.sentHeaders)
@@ -137,32 +164,31 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.sentElementsTableView.verticalHeader().hide()
 
     def handleMissionDoubleClick(self, index):
-        if index.row() != 0:
-            # Extract the mission key from the selected row
-            mission_key = self.missionModel.item(index.row(), 5).text()  # Assuming column 5 has the mission key
-            mission = None
-            with open('temp/missions.json', 'r') as file:
-                missions = json.load(file)
-            for data in missions:  # Assuming you store mission data somewhere accessible
-                if data['key'] == mission_key:
-                    mission = data
-                    break
-            
-            if mission:
-                names = ""
-                for resource in mission.get('resources'):
-                    names += resource['lastName'] + " " + resource['firstName'] + " - "
-                mission_start = datetime.strptime(mission['start'], '%Y-%m-%d %H:%M:%S')
+        # Extract the mission key from the selected row
+        mission_key = self.missionModel.item(index.row(), 5).text()  # Assuming column 5 has the mission key
+        mission = None
+        with open('temp/missions.json', 'r') as file:
+            missions = json.load(file)
+        for data in missions:  # Assuming you store mission data somewhere accessible
+            if data['key'] == mission_key:
+                mission = data
+                break
+        
+        if mission:
+            names = ""
+            for resource in mission.get('resources'):
+                names += resource['lastName'] + " " + resource['firstName'] + " - "
+            mission_start = datetime.strptime(mission['start'], '%Y-%m-%d %H:%M:%S')
 
-                day_missions = mission_start.strftime('%Y%m%d')  # Format the date
-                pdf_path = f"./generated/{day_missions}/{names}{mission['key']}.pdf"
-                
-                if os.path.exists(pdf_path):
-                    # Open the PDF if it exists
-                    subprocess.Popen([pdf_path], shell=True)
-                else:
-                    # Show message box if the PDF does not exist
-                    QMessageBox.information(self, "PDF Not Found", "Please first generate the PDF.")
+            day_missions = mission_start.strftime('%Y%m%d')  # Format the date
+            pdf_path = f"./generated/{day_missions}/{names}{mission['key']}.pdf"
+            
+            if os.path.exists(pdf_path):
+                # Open the PDF if it exists
+                subprocess.Popen([pdf_path], shell=True)
+            else:
+                # Show message box if the PDF does not exist
+                QMessageBox.information(self, "PDF Not Found", "Please first generate the PDF.")
 
     # ------------------ Functions that interact with the GUI ------------------
 
@@ -198,8 +224,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         # Clear existing data from the model
         self.missionModel.clear()
 
-        self.missionModel.setupInitialData() # Reinitialize the "Select all"
-
         # Load JSON data from a file
         with open(file_path, 'r') as file:
             data = json.load(file)
@@ -207,6 +231,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         # Set column headers
         headers = self.missionHeaders
         self.missionModel.setHorizontalHeaderLabels(headers) 
+        self.missionTableView.setHorizontalHeader(self.CheckboxHeader)
 
         # Assuming JSON data is a list of dictionaries
         if data:
@@ -242,9 +267,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             self.missionTableView.resizeColumnsToContents()
             for row in range(self.missionModel.rowCount()):
                 self.missionTableView.setRowHeight(row, 60)
-        
-        # Additional setup for row height, etc.
-        self.missionTableView.setRowHeight(0, 10)  # Set a fixed height for the 'Select All' row
 
         # Highlight rows containing conflicts...
         if conflicts:
@@ -253,7 +275,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def get_selected_items(self, table):
         selected_items = []
         if table == "missions":
-            for row in range(1, self.missionModel.rowCount()):
+            for row in range(self.missionModel.rowCount()):
                 if self.missionModel.item(row, 0).checkState() == Qt.CheckState.Checked:
                     mission_key = self.missionModel.item(row, 5).text()  # Assuming the mission key is in the sixth column
                     selected_items.append(mission_key)
@@ -262,6 +284,11 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 if self.departmentModel.item(row, 0).checkState() == Qt.CheckState.Checked:
                     selected_items.append(self.departmentModel.item(row, 1).text())
         return selected_items
+    
+    def toggleAllCheckboxes(self, checked):
+        state = Qt.CheckState.Checked if checked else Qt.CheckState.Unchecked
+        for row in range(self.missionModel.rowCount()):
+            self.missionModel.item(row, 0).setCheckState(state)
                 
     def show_conflict_results(self, result_info):
         if result_info['data']:
@@ -284,14 +311,13 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         # Call this method after data is loaded into the table
         self.assign_colors_to_conflicts(conflicts)
         for row in range(self.missionModel.rowCount()):
-            if row != 0:
-                item_key = self.missionModel.item(row, 5).text()  # Assuming key is in the sixth column
-                for source, missions in conflicts.items():
-                    if item_key in missions:
-                        color = QColor(self.conflict_colors[source])
-                        for col in range(self.missionModel.columnCount()):
-                            item = self.missionModel.item(row, col)
-                            item.setBackground(color)
+            item_key = self.missionModel.item(row, 5).text()  # Assuming key is in the sixth column
+            for source, missions in conflicts.items():
+                if item_key in missions:
+                    color = QColor(self.conflict_colors[source])
+                    for col in range(self.missionModel.columnCount()):
+                        item = self.missionModel.item(row, col)
+                        item.setBackground(color)
 
     def load_data_to_sent_table(self, file_path):
         self.sentModel.clear()
@@ -365,8 +391,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         # Get the date from the dateSelector
         selected_date = self.dateSelector.date().toPyDate()  # Converts QDate to Python date
         departments = self.get_selected_items("departments") # Get departments
-        print(departments)
-
+        if departments == []:
+            QtWidgets.QMessageBox.warning(self, "No Selection", "Please select at least one department.")
+            return
         self.current_task = 'fetch_and_store'  # Set the current task
         self.message = 'Data loading'
 
@@ -403,40 +430,11 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 class MissionTableModel(QStandardItemModel):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.checkState = Qt.CheckState.Checked
-
-    def setupInitialData(self):
-        # Initial setup for the 'Select All' checkbox
-        select_all_item = QStandardItem()
-        select_all_item.setCheckable(True)
-        select_all_item.setCheckState(Qt.CheckState.Checked)
-        self.insertRow(0, [select_all_item])
 
     def flags(self, index):
-        # Standard flags setup, with non-selectable first row
-        if index.row() == 0:
-            return super().flags(index) & ~Qt.ItemFlag.ItemIsSelectable
-        return super().flags(index) | Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled
-
-    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
-        if index.row() == 0 and index.column() == 0 and role == Qt.ItemDataRole.CheckStateRole:
-            return self.checkState
-        return super().data(index, role)
-
-    def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
-        # Managing check state and updating all checkboxes based on 'Select All'
-        if index.row() == 0 and index.column() == 0 and role == Qt.ItemDataRole.CheckStateRole:
-            self.checkState = value
-            self.toggleAllCheckboxes(value)
-            self.dataChanged.emit(index, index, [role])  # Important to update the view
-            return True
-        return super().setData(index, value, role)
-
-    def toggleAllCheckboxes(self, state):
-        # Applying check state to all checkboxes in column 0
-        for row in range(1, self.rowCount()):  # Skip the first row
-            index = self.index(row, 0)
-            super().setData(index, state, Qt.ItemDataRole.CheckStateRole)
+        if index.column() == 0:
+            return super().flags(index) | Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled
+        return super().flags(index)
 
 # ------------------ Worker object ------------------
 
