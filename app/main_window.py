@@ -438,6 +438,11 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.start_thread(self.current_task, self.message, selected_keys)
 
     def check_source_conflicts(self):
+        # Check if the missions file exists
+        missions_file_path = 'temp/missions.json'
+        if not os.path.exists(missions_file_path):
+            QtWidgets.QMessageBox.warning(self, "No Data", "Please first fetch mission data.")
+            return
         self.current_task = 'check_sources_conflicts'
         self.message = 'Source conflicts'
         self.start_thread(self.current_task, self.message)
