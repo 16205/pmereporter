@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from . import auth
 from tqdm import tqdm
+import base64
 import os
 import pytz
 import requests
@@ -246,3 +247,43 @@ def get_sent_elements(access_token:str):
     else:
         raise ValueError(f"Failed to retrieve data: {response.status_code}")
         # print("Failed to retrieve data:", response.status_code)
+
+def download_sharepoint_file(access_token, sharepoint_url, filename):
+    dir = "/temp/attachments"
+    headers = {
+        "Authorization": f"Bearer {access_token}"
+    }
+    graph_url = transform_sharepoint_url(sharepoint_url, access_token)
+    response = requests.get(graph_url, headers=headers)
+    response.raise_for_status()
+
+    if not os.path.exists(os.path.dirname(dir)):
+        os.makedirs(os.path.dirname(dir))
+    with open(filename, 'wb') as file:
+        for chunk in response.iter_content(chunk_size=8192):
+            if chunk:
+                file.write(chunk)
+
+def transform_sharepoint_url(sharepoint_url, access_token):
+    headers = {
+        'Authorization': f'Bearer {access_token}',
+        'Accept': 'application/json'
+    }
+    
+    # Encode the SharePoint link
+    encoded_link = base64.urlsafe_b64encode(sharepoint_url.encode()).decode().rstrip("=")
+    
+    # Step 1: Get the drive item ID from the SharePoint link
+    drive_item_url = f"https://graph.microsoft.com/v1.0/shares/u!{encoded_link}/driveItem"
+    
+    response = requests.get(drive_item_url, headers=headers)
+    if response.status_code != 200:
+        raise ValueError(f"Error getting drive item: {response.status_code}, {response.text}")
+    
+    drive_item_info = response.json()
+    item_id = drive_item_info['id']
+    
+    # Step 2: Get the download URL using the drive item ID
+    graph_url = f"https://graph.microsoft.com/v1.0/me/drive/items/{item_id}/content"
+    
+    return graph_url

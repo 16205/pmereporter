@@ -90,7 +90,7 @@ def authenticate_to_ms_graph():
     CLIENT_SECRET = os.environ['MS_CLIENT_SECRET']
     TENANT_ID = os.environ['MS_TENANT_ID']
     AUTHORITY_URL = f'https://login.microsoftonline.com/{TENANT_ID}'
-    SCOPE = ['Mail.Send', 'User.Read']
+    SCOPE = ['Mail.Send', 'User.Read', 'Files.Read', 'Sites.Read.All']
 
     # Initialize MSAL ConfidentialClientApplication
     app = ConfidentialClientApplication(CLIENT_ID, authority=AUTHORITY_URL, client_credential=CLIENT_SECRET)

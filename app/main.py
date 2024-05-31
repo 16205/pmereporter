@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from modules import auth, ingest, process, utils
 
-date = datetime(2024, 5, 27)
+date = datetime(2024, 5, 29)
 # dateTo = datetime(2023, 11, 21, 23, 59, 59, 999)
 
 def fetch_and_store(date:datetime = None, departments:list=None, progress_callback=None):
@@ -25,20 +25,35 @@ def fetch_and_store(date:datetime = None, departments:list=None, progress_callba
 
     try:
         missions = ingest.get_events(dateFrom, dateTo, depts)
-        current_progress += 5  # 5% progress after fetching events
-        if progress_callback:
-            progress_callback(current_progress)
     except Exception:
         auth.authenticate_to_ppme()
         missions = ingest.get_events(dateFrom, dateTo, depts)
-        current_progress += 5  # Repeat increment if re-authentication and fetching events
-        if progress_callback:
-            progress_callback(current_progress)
     
-    utils.save_to_json('temp/missions_raw.json', missions) # Debug
+    current_progress += 5  # 5% progress after fetching events
+    if progress_callback:
+        progress_callback(current_progress)
+    
+    # utils.save_to_json('temp/missions_raw.json', missions) # Debug
 
     missions = process.clean_data(missions)
-    current_progress += 5  # Increment by 5% after cleaning data
+
+    for mission in missions:
+        links = mission.get("attachmentLinks")
+        if links != []:
+            load_dotenv(override=True)
+            access_token = os.environ.get('MS_ACCESS_TOKEN')
+            for index, link in enumerate(links):
+                try:
+                    ingest.download_sharepoint_file(access_token, link, f"{mission.get("key")}_{index}")
+                except ValueError:
+                    try:
+                        access_token = auth.refresh_access_token()
+                        ingest.download_sharepoint_file(access_token, link, f"{mission.get("key")}_{index}")
+                    except ValueError:
+                        access_token = auth.authenticate_to_ms_graph()['access_token']
+                        ingest.download_sharepoint_file(access_token, link, f"{mission.get("key")}_{index}")
+
+    current_progress += 5  # Increment by 5% after cleaning data and downloading attachments
     if progress_callback:
         progress_callback(current_progress)
 
@@ -123,7 +138,7 @@ def get_sent_elements():
             access_token = auth.refresh_access_token()
             utils.save_to_json('temp/sentElements.json', ingest.get_sent_elements(access_token))
         except ValueError:
-            access_token = auth.authenticate_to_ms_graph()
+            access_token = auth.authenticate_to_ms_graph()['access_token']
             utils.save_to_json('temp/sentElements.json', ingest.get_sent_elements(access_token))
             
 # fetch_and_store(date, ['North', 'South'])
