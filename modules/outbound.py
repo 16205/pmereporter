@@ -4,7 +4,7 @@ import base64
 import os
 import requests
 
-def send_email(subject:str, recipients:list, content:str, file_path:str=None):
+def send_email(subject:str, recipients:list, content:str, file_paths:list=None, from_address:str=None):
     load_dotenv(override=True)
     
     # Constants
@@ -33,23 +33,32 @@ def send_email(subject:str, recipients:list, content:str, file_path:str=None):
         },
         "saveToSentItems": True,
     }
+
+    # Add the from address if provided
+    if from_address:
+        email_data["message"]["from"] = {
+            "emailAddress": {
+                "address": from_address
+            }
+        }
     
     # Add an attachment if a file path is provided
-    if file_path:
-        with open(file_path, "rb") as file:
-            # Read the file and encode it in base64
-            file_content = base64.b64encode(file.read()).decode()
+    if file_paths:
+        for file_path in file_paths:
+            with open(file_path, "rb") as file:
+                # Read the file and encode it in base64
+                file_content = base64.b64encode(file.read()).decode()
+                
+            # Get the file name
+            file_name = file_path.split('/')[-1]
             
-        # Get the file name
-        file_name = file_path.split('/')[-1]
-        
-        # Add the attachment to the message payload
-        email_data["message"]["attachments"].append({
-            "@odata.type": "#microsoft.graph.fileAttachment",
-            "name": file_name,
-            "contentType": "application/octet-stream",  # You might want to adjust this based on the file type
-            "contentBytes": file_content
-        })
+            # Add the attachment to the message payload
+            email_data["message"]["attachments"].append({
+                "@odata.type": "#microsoft.graph.fileAttachment",
+                "name": file_name,
+                "contentType": "application/octet-stream",  # You might want to adjust this based on the file type
+                "contentBytes": file_content
+            })
     
     # Send the email
     try:

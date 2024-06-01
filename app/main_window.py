@@ -1,7 +1,7 @@
 from PyQt6 import QtWidgets
-from PyQt6.QtGui import QStandardItemModel, QStandardItem, QColor, QPainter, QMouseEvent
+from PyQt6.QtGui import QStandardItemModel, QStandardItem, QColor
 from PyQt6.QtCore import QThread, pyqtSignal, Qt, QRect
-from PyQt6.QtWidgets import QProgressDialog, QMessageBox, QStyledItemDelegate, QApplication, QStyle, QStyleOptionButton, QHeaderView
+from PyQt6.QtWidgets import QProgressDialog, QMessageBox, QApplication, QStyle, QStyleOptionButton, QHeaderView
 from datetime import datetime
 import json
 import os
@@ -137,7 +137,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.missionTableView.setHorizontalHeader(self.CheckboxHeader)
 
         # Set column headers
-        self.missionHeaders = [None, 'Agents', 'Date & time', 'Client', 'SO n°', 'Intervention n°', 'Departure From', 'Location', 'RT Sources']
+        self.missionHeaders = [None, 'Agents', 'Date & time', 'Client', 'SO n°', 'Intervention n°', 'Departure From', 'Location', 'RT Sources', 'Attachments']
         self.missionModel.setHorizontalHeaderLabels(self.missionHeaders)
 
         self.apply_styleSheet(self.missionTableView)
@@ -246,6 +246,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 sources = ""
                 for source in item.get('sources'):
                     sources += f"{source}\n"
+                filenames = ""
+                if item.get('attachmentFileNames'):
+                    for filename in item.get('attachmentFileNames'):
+                        filenames += f"{filename}\n"
                 row.extend([
                     QStandardItem(resource_names),
                     QStandardItem(item.get('start')),
@@ -254,7 +258,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                     QStandardItem(str(item.get('key'))),
                     QStandardItem(item.get('departurePlace')),
                     QStandardItem(item.get('location')),
-                    QStandardItem(sources)
+                    QStandardItem(sources),
+                    QStandardItem(filenames)
                 ])
                 # Set vertical alignment for all items in the row
                 for cell in row:
@@ -355,7 +360,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.thread = Worker(task_type, *args)  # Initialize the worker thread
         self.thread.progress_updated.connect(self.update_progress)  # Connect progress update signal
         self.thread.finished.connect(self.task_finished)  # Connect the finished signal
-        
+        self.thread.error_occurred.connect(self.handle_thread_error)  # Connect the error signal
         self.progress_dialog = QProgressDialog(f"Please wait, {message.lower()}...", "Cancel", 0, 100, self)
         self.progress_dialog.setWindowTitle(f"{message}")
         self.progress_dialog.setModal(True)
@@ -368,6 +373,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.progress_dialog.setValue(value)
 
     def task_finished(self):
+        if self.thread.error:
+            return  # Skip the rest of the function if an error occurred
+        
         # Check which task finished and act accordingly
         if self.current_task == 'fetch_and_store':
             # After fetching, immediately check for conflicts
@@ -382,6 +390,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.current_task = None  # Reset current task
         self.message = None # Clear message
 
+    def handle_thread_error(self, error_message):
+        QtWidgets.QMessageBox.critical(self, "Error", error_message)
+        self.progress_dialog.cancel()
 
     # ------------------ Functions linked to buttons ------------------
 
@@ -455,22 +466,28 @@ class MissionTableModel(QStandardItemModel):
 class Worker(QThread):
     progress_updated = pyqtSignal(int)
     finished = pyqtSignal()
+    error_occurred = pyqtSignal(str)  # Custom signal to emit error messages
 
     def __init__(self, task_type, *args, **kwargs):
         super(Worker, self).__init__()
         self.task_type = task_type
         self.args = args
         self.kwargs = kwargs
+        self.error = False
 
     def run(self):
-        if self.task_type == 'fetch_and_store':
-            main.fetch_and_store(*self.args, progress_callback=self.handle_progress, **self.kwargs)
-        elif self.task_type == 'generate':
-            main.generate(*self.args, progress_callback=self.handle_progress, **self.kwargs)
-        elif self.task_type == 'send':
-            main.send(*self.args, progress_callback=self.handle_progress, **self.kwargs)
-        elif self.task_type =='sync_sent_elements':
-            main.get_sent_elements(*self.args, **self.kwargs)
+        try:
+            if self.task_type == 'fetch_and_store':
+                main.fetch_and_store(*self.args, progress_callback=self.handle_progress, **self.kwargs)
+            elif self.task_type == 'generate':
+                main.generate(*self.args, progress_callback=self.handle_progress, **self.kwargs)
+            elif self.task_type == 'send':
+                main.send(*self.args, progress_callback=self.handle_progress, **self.kwargs)
+            elif self.task_type =='sync_sent_elements':
+                main.get_sent_elements(*self.args, **self.kwargs)
+        except Exception as e:
+            self.error = True
+            self.error_occurred.emit(str(e))  # Emit the error message
         self.finished.emit()
 
     def handle_progress(self, progress):

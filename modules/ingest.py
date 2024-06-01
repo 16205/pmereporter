@@ -248,21 +248,57 @@ def get_sent_elements(access_token:str):
         raise ValueError(f"Failed to retrieve data: {response.status_code}")
         # print("Failed to retrieve data:", response.status_code)
 
-def download_sharepoint_file(access_token, sharepoint_url, filename):
-    dir = "/temp/attachments"
-    headers = {
-        "Authorization": f"Bearer {access_token}"
-    }
-    graph_url = transform_sharepoint_url(sharepoint_url, access_token)
-    response = requests.get(graph_url, headers=headers)
-    response.raise_for_status()
+def download_sharepoint_file(missions, access_token, min, max, progress_callback=None):
+    keys = []
+    for mission in missions:
+        links = mission.get("attachmentLinks")
+        if links != []:
+            keys.append(mission.get('key'))
+    total_missions = len(keys)
 
-    if not os.path.exists(os.path.dirname(dir)):
-        os.makedirs(os.path.dirname(dir))
-    with open(filename, 'wb') as file:
-        for chunk in response.iter_content(chunk_size=8192):
-            if chunk:
-                file.write(chunk)
+    processed_count = 0
+    for mission in missions:
+        if mission.get('key') in keys:
+            links = mission.get("attachmentLinks")
+            if links != []:
+                mission['attachmentFileNames'] = []
+                for link in links:
+                    # Raise an exception if the link provided starts with "\\Vilv8PPMEP", which is not supported anymore. The planners should use SharePoint to store the files instead.
+                    if link.startswith('\\\\Vilv8PPMEP'):
+                        raise NameError(f"The provided link in PlanningPME>mission n°{mission.get('key')} of {mission.get('start')} with {mission.get('resources')[0].get('lastName')}>Extra info>link interventiondoc 1 or 2 points to a legacy storage server file that is not supported anymore. Please use Vincotte NDT SharePoint's dedicated folder instead.")
+                    
+                    try:
+                        drive_item_info = transform_sharepoint_url(link, access_token)
+                    except NameError:
+                        raise NameError(f"The provided link in PlanningPME>mission n°{mission.get('key')} of {mission.get('start')} with {mission.get('resources')[0].get('lastName')}>Extra info>link interventiondoc 1 or 2 is not a valid url pointing to a Vincotte NDT SharePoint file")
+                    headers = {
+                        "Authorization": f"Bearer {access_token}"
+                    }
+                    subdir = datetime.strptime(mission.get('start'), '%Y-%m-%d %H:%M:%S').strftime('%Y%m%d')
+                    mission_key = mission.get('key')
+                    dir = f"./temp/attachments/{subdir}/{mission_key}/"
+                    filename = dir + drive_item_info.get('name')
+
+                    # Raise an exception if the file extension is not pdf, Word or image, to forbid misuse by planners
+                    allowed_extensions = ['.pdf', '.doc', '.docx','.docm', '.dot', '.dotx', '.dotm', '.jpeg', '.jpg', '.png', '.heic']
+                    if not any(filename.endswith(ext) for ext in allowed_extensions):
+                        raise NameError(f"The provided link in PlanningPME>mission n°{mission.get('key')} of {mission.get('start')} with {mission.get('resources')[0].get('lastName')}>Extra info>link interventiondoc 1 or 2 points to an unauthorized file type. Please use a pdf, Word document, or an image instead.")
+
+                    graph_url = drive_item_info.get('@microsoft.graph.downloadUrl')
+                    response = requests.get(graph_url, headers=headers)
+                    response.raise_for_status()
+
+                    if not os.path.exists(os.path.dirname(dir)):
+                        os.makedirs(os.path.dirname(dir))
+                    with open(filename, 'wb') as file:
+                        file.write(response.content)
+                    mission['attachmentFileNames'].append(drive_item_info.get('name'))
+            # Update processed count and emit progress
+            processed_count += 1
+            progress = processed_count / total_missions
+            if progress_callback:
+                progress_callback(progress, min, max)
+    return missions
 
 def transform_sharepoint_url(sharepoint_url, access_token):
     headers = {
@@ -275,15 +311,15 @@ def transform_sharepoint_url(sharepoint_url, access_token):
     
     # Step 1: Get the drive item ID from the SharePoint link
     drive_item_url = f"https://graph.microsoft.com/v1.0/shares/u!{encoded_link}/driveItem"
-    
+
     response = requests.get(drive_item_url, headers=headers)
     if response.status_code != 200:
-        raise ValueError(f"Error getting drive item: {response.status_code}, {response.text}")
+        if response.status_code == 403:
+            raise NameError
+        if response.status_code == 401:
+            raise ValueError
+        raise Exception(f"Error getting drive item: {response.status_code}, {response.text}")
     
     drive_item_info = response.json()
-    item_id = drive_item_info['id']
     
-    # Step 2: Get the download URL using the drive item ID
-    graph_url = f"https://graph.microsoft.com/v1.0/me/drive/items/{item_id}/content"
-    
-    return graph_url
+    return drive_item_info

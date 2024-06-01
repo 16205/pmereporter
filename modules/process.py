@@ -495,7 +495,13 @@ def send_om(missions:dict, keys:list[str], progress_callback=None):
         intervention_date = mission_start.strftime('%d/%m/%Y')
         content = f"Please find in attachment the Intervention Document (Nr: {number})\n\n"
             
-        attachment_path = f"generated/{mission_start.strftime('%Y%m%d')}/{names}{number}.pdf"
+        attachment_path = [f"generated/{mission_start.strftime('%Y%m%d')}/{names}{number}.pdf"]
+
+        additional_attachments_path = f"temp/attachments/{mission_start.strftime('%Y%m%d')}/{number}"
+        
+        if os.path.isdir(additional_attachments_path):
+            for file in os.listdir(additional_attachments_path):
+                attachment_path.append(f"{additional_attachments_path}/{file}")
         
         # recipients_str is for development purposes
         recipients_str = "[\n"
@@ -503,7 +509,7 @@ def send_om(missions:dict, keys:list[str], progress_callback=None):
             recipients_str += recipient + ",\n"
         recipients_str += "]"
         
-        outbound.send_email(f"Mission order n°{number} - {intervention_date}", ['glohest@vincotte.be'], content+recipients_str, attachment_path)
+        outbound.send_email(f"Mission order n°{number} - {intervention_date}", ['glohest@vincotte.be'], content+recipients_str, attachment_path, 'cnd.cnt@vincotte.be')
         
         # Update processed count and emit progress
         processed_count += 1
@@ -530,7 +536,8 @@ def clean_data(missions):
             "sources": [],
             "location": "Run get_locations()",
             "oneWayTransport": mission.get('fields').get('ONEWAYTRANSPORT'),
-            "return": False
+            "return": False,
+            "attachmentLinks": []
         }
 
         # Populate SOnumber
@@ -605,6 +612,12 @@ def clean_data(missions):
         
         # Populate location if available
         mission_dict['location'] = mission.get('location') if mission.get('location') != '' else None
+
+        # Populate attachment links if available
+        mission_dict['attachmentLinks'] = [mission.get('fields').get('SALESORDER2'),
+                                           mission.get('fields').get('SALESORDER4')]
+        # Remove empty or None values
+        mission_dict['attachmentLinks'] = [link for link in mission_dict['attachmentLinks'] if link is not None and link!= '' and link != '..']
 
         missions_cleaned.append(mission_dict)
 

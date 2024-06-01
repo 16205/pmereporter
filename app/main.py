@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from modules import auth, ingest, process, utils
 
-date = datetime(2024, 5, 29)
+date = datetime(2023, 11, 21)
 # dateTo = datetime(2023, 11, 21, 23, 59, 59, 999)
 
 def fetch_and_store(date:datetime = None, departments:list=None, progress_callback=None):
@@ -35,28 +35,6 @@ def fetch_and_store(date:datetime = None, departments:list=None, progress_callba
     
     # utils.save_to_json('temp/missions_raw.json', missions) # Debug
 
-    missions = process.clean_data(missions)
-
-    for mission in missions:
-        links = mission.get("attachmentLinks")
-        if links != []:
-            load_dotenv(override=True)
-            access_token = os.environ.get('MS_ACCESS_TOKEN')
-            for index, link in enumerate(links):
-                try:
-                    ingest.download_sharepoint_file(access_token, link, f"{mission.get("key")}_{index}")
-                except ValueError:
-                    try:
-                        access_token = auth.refresh_access_token()
-                        ingest.download_sharepoint_file(access_token, link, f"{mission.get("key")}_{index}")
-                    except ValueError:
-                        access_token = auth.authenticate_to_ms_graph()['access_token']
-                        ingest.download_sharepoint_file(access_token, link, f"{mission.get("key")}_{index}")
-
-    current_progress += 5  # Increment by 5% after cleaning data and downloading attachments
-    if progress_callback:
-        progress_callback(current_progress)
-
     # Adjust the progress callback to fit the specified min-max% range
     def adjusted_progress(inner_progress, min, max):
         # Map inner_progress from 0-100% to min-max% of the overall progress
@@ -64,7 +42,25 @@ def fetch_and_store(date:datetime = None, departments:list=None, progress_callba
         if progress_callback:
             progress_callback(mapped_progress)
 
-    missions = ingest.get_locations(missions, 10, 90, adjusted_progress)
+    # Clean missions.json
+    missions = process.clean_data(missions)
+
+    # Download mission attachments from SharePoint
+    access_token = os.environ.get('MS_ACCESS_TOKEN')
+    try:
+        missions = ingest.download_sharepoint_file(missions, access_token, 5, 30, adjusted_progress)
+    except ValueError:
+        try:
+            access_token = auth.refresh_access_token()
+            missions = ingest.download_sharepoint_file(missions, access_token, 5, 30, adjusted_progress)
+        except ValueError:
+            access_token = auth.authenticate_to_ms_graph()
+            missions = ingest.download_sharepoint_file(missions, access_token, 5, 30, adjusted_progress)
+
+    current_progress = 30  # Increment to 20% after cleaning data and downloading attachments
+
+
+    missions = ingest.get_locations(missions, 30, 90, adjusted_progress)
     current_progress = 90  # After get_locations, we're at 90%
 
     utils.save_to_json('temp/missions.json', missions)
