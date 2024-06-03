@@ -262,15 +262,15 @@ def download_sharepoint_file(missions, access_token, min, max, progress_callback
             links = mission.get("attachmentLinks")
             if links != []:
                 mission['attachmentFileNames'] = []
-                for link in links:
+                for index, link in enumerate(links):
                     # Raise an exception if the link provided starts with "\\Vilv8PPMEP", which is not supported anymore. The planners should use SharePoint to store the files instead.
-                    if link.startswith('\\\\Vilv8PPMEP'):
-                        raise NameError(f"The provided link in PlanningPME>mission n°{mission.get('key')} of {mission.get('start')} with {mission.get('resources')[0].get('lastName')}>Extra info>link interventiondoc 1 or 2 points to a legacy storage server file that is not supported anymore. Please use Vincotte NDT SharePoint's dedicated folder instead.")
+                    if link.startswith('\\\\Vilv8PPMEP') or link.startswith('\\\\VILV8PPMEP'):
+                        raise NameError(f"The provided link at:\n\nPlanningPME > mission n°{mission.get('key')} of {mission.get('start')} with {mission.get('resources')[0].get('lastName')} for {mission.get('customers')[0].get('label') if mission.get('customers') else None} > Extra info > link interventiondoc {index+1}\n\npoints to a legacy storage server file that is not supported anymore. Please use Vincotte NDT SharePoint's dedicated folder instead.")
                     
                     try:
                         drive_item_info = transform_sharepoint_url(link, access_token)
                     except NameError:
-                        raise NameError(f"The provided link in PlanningPME>mission n°{mission.get('key')} of {mission.get('start')} with {mission.get('resources')[0].get('lastName')}>Extra info>link interventiondoc 1 or 2 is not a valid url pointing to a Vincotte NDT SharePoint file")
+                        raise NameError(f"The provided link at:\n\nPlanningPME > mission n°{mission.get('key')} of {mission.get('start')} with {mission.get('resources')[0].get('lastName')} for {mission.get('customers')[0].get('label') if mission.get('customers') else None} > Extra info > link interventiondoc {index+1}\n\nis not a valid url pointing to a Vincotte NDT SharePoint file")
                     headers = {
                         "Authorization": f"Bearer {access_token}"
                     }
@@ -282,7 +282,7 @@ def download_sharepoint_file(missions, access_token, min, max, progress_callback
                     # Raise an exception if the file extension is not pdf, Word or image, to forbid misuse by planners
                     allowed_extensions = ['.pdf', '.doc', '.docx','.docm', '.dot', '.dotx', '.dotm', '.jpeg', '.jpg', '.png', '.heic']
                     if not any(filename.endswith(ext) for ext in allowed_extensions):
-                        raise NameError(f"The provided link in PlanningPME>mission n°{mission.get('key')} of {mission.get('start')} with {mission.get('resources')[0].get('lastName')}>Extra info>link interventiondoc 1 or 2 points to an unauthorized file type. Please use a pdf, Word document, or an image instead.")
+                        raise NameError(f"The provided link at:\n\nPlanningPME > mission n°{mission.get('key')} of {mission.get('start')} with {mission.get('resources')[0].get('lastName')} for {mission.get('customers')[0].get('label') if mission.get('customers') else None} > Extra info > link interventiondoc {index+1}\n\npoints to an unauthorized file type. Please use a pdf, Word document, or an image instead.")
 
                     graph_url = drive_item_info.get('@microsoft.graph.downloadUrl')
                     response = requests.get(graph_url, headers=headers)
