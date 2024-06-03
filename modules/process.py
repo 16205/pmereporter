@@ -578,7 +578,7 @@ def clean_data(missions):
         mission_dict['comments'] = [mission.get('fields').get('COMMENTS_LOCATION'), 
                                     mission.get('remark'), 
                                     # mission.get('fields').get('TASKCOMMENTS'), 
-                                    mission.get('customers')[0].get('fields').get('COMMENTSCUSTOMER')]
+                                    mission.get('customers')[0].get('fields').get('COMMENTSCUSTOMER') if mission.get('customers') else None]
         # Remove empty or None values
         mission_dict['comments'] = [comment for comment in mission_dict['comments'] if comment is not None and comment!= '']
         
