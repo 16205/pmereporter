@@ -468,7 +468,7 @@ def check_sources_double_bookings(missions: list) -> dict:
     return None if not double_bookings else double_bookings
 
 
-def send_om(missions:dict, keys:list[str], progress_callback=None):
+def send_om(missions:dict, keys:list[str], sender_name:str, progress_callback=None):
     # print("Sending mission orders...")
 
     # Variables for process tracking
@@ -493,7 +493,10 @@ def send_om(missions:dict, keys:list[str], progress_callback=None):
         number = mission.get('key')
         mission_start = datetime.strptime(mission['start'], '%Y-%m-%d %H:%M:%S')
         intervention_date = mission_start.strftime('%d/%m/%Y')
-        content = f"Please find in attachment the Intervention Document (Nr: {number})\n\n"
+        
+        subject = f"Mission order n°{number} - {intervention_date}"
+        
+        content = f"Please find in attachment the Intervention Document (Nr: {number}).\n\nKind regards,\n\n{sender_name}\n\n"
             
         attachment_path = [f"generated/{mission_start.strftime('%Y%m%d')}/{names}{number}.pdf"]
 
@@ -502,14 +505,17 @@ def send_om(missions:dict, keys:list[str], progress_callback=None):
         if os.path.isdir(additional_attachments_path):
             for file in os.listdir(additional_attachments_path):
                 attachment_path.append(f"{additional_attachments_path}/{file}")
+
+        sender_address = 'NDTplanning@vincotte.be'
+
+        # # recipients_str is for development purposes
+        # recipients_str = "[\n"
+        # for recipient in recipients:
+        #     recipients_str += recipient + ",\n"
+        # recipients_str += "]\n\n"
+        # content += recipients_str
         
-        # recipients_str is for development purposes
-        recipients_str = "[\n"
-        for recipient in recipients:
-            recipients_str += recipient + ",\n"
-        recipients_str += "]"
-        
-        outbound.send_email(f"Mission order n°{number} - {intervention_date}", ['glohest@vincotte.be'], content+recipients_str, attachment_path, 'cnd.cnt@vincotte.be')
+        outbound.send_email(subject, ['glohest@vincotte.be'], content, attachment_path, sender_address)
         
         # Update processed count and emit progress
         processed_count += 1
