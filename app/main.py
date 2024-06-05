@@ -9,7 +9,10 @@ from modules import auth, ingest, process, utils
 date = datetime(2023, 11, 21)
 # dateTo = datetime(2023, 11, 21, 23, 59, 59, 999)
 
+env_path = utils.get_env_path()
+
 def fetch_and_store(date:datetime = None, departments:list=None, progress_callback=None):
+    load_dotenv(env_path)
     current_progress = 0
     if progress_callback:
         progress_callback(current_progress)  # Start with 0% progress
@@ -28,7 +31,6 @@ def fetch_and_store(date:datetime = None, departments:list=None, progress_callba
     except Exception:
         auth.authenticate_to_ppme()
         missions = ingest.get_events(dateFrom, dateTo, depts)
-    
     current_progress += 5  # 5% progress after fetching events
     if progress_callback:
         progress_callback(current_progress)
@@ -59,7 +61,6 @@ def fetch_and_store(date:datetime = None, departments:list=None, progress_callba
 
     current_progress = 30  # Increment to 20% after cleaning data and downloading attachments
 
-
     missions = ingest.get_locations(missions, 30, 90, adjusted_progress)
     current_progress = 90  # After get_locations, we're at 90%
 
@@ -69,13 +70,17 @@ def fetch_and_store(date:datetime = None, departments:list=None, progress_callba
     if progress_callback:
         progress_callback(current_progress)
 
-    sources = ingest.get_sources()
+    # Encapsulated ingest.get_sources because sometimes, for some unknown reason, a 503 error happens but goes away when retrying
+    try:
+        sources = ingest.get_sources()
+    except:
+        sources = ingest.get_sources()
+
     utils.save_to_json('temp/sources.json', sources)
     current_progress += 5  # Final 5% to complete the process
     if progress_callback:
         # progress_callback(current_progress)
         progress_callback(100)  # Ensure completion is signaled correctly
-
 
 def generate(keys:list[str], progress_callback=None):
     """
@@ -108,12 +113,16 @@ def generate(keys:list[str], progress_callback=None):
         progress_callback(100)  # Ensure completion is signaled correctly
 
 def send(keys:list[str], progress_callback=None):
+    load_dotenv(env_path)
     if progress_callback:
         progress_callback(0)  # Start with 0% progress
 
     with open('temp/missions.json', 'r') as file:
         missions = json.load(file)
-    process.send_om(missions, keys, progress_callback)
+
+    name = os.environ.get('MS_USER_NAME')
+    
+    process.send_om(missions, keys, name, progress_callback)
 
     if progress_callback:
         progress_callback(100)  # Ensure completion is signaled correctly
@@ -126,7 +135,7 @@ def check_sources_conflicts():
 
 def get_sent_elements():
     try:
-        load_dotenv(override=True)
+        load_dotenv(env_path)
         access_token = os.environ.get('MS_ACCESS_TOKEN')
         utils.save_to_json('temp/sentElements.json', ingest.get_sent_elements(access_token))
     except ValueError:
@@ -136,8 +145,17 @@ def get_sent_elements():
         except ValueError:
             access_token = auth.authenticate_to_ms_graph()['access_token']
             utils.save_to_json('temp/sentElements.json', ingest.get_sent_elements(access_token))
-            
-# fetch_and_store(date, ['North', 'South'])
+
+def init_user():
+    load_dotenv(env_path)
+    access_token = os.environ.get('MS_ACCESS_TOKEN')
+    if not access_token:
+        access_token = auth.authenticate_to_ms_graph()['access_token']
+    else:
+        access_token = auth.refresh_access_token()
+    ingest.get_user_details(access_token)
+
+# fetch_and_store(date, ['South'])
 # generate(None)
 # send(None)
 # check_sources_conflicts()
