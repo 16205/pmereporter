@@ -235,14 +235,19 @@ def resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller.
         Converts backslashes in relative paths to forward slashes for consistency.
     """
-    # Normalize the path by replacing backslashes with forward slashes
-    normalized_path = relative_path.replace("/", "\\")
-    
-    # Get the base path depending on the context (development or bundled)
-    base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
-    
-    # Join the base path with the normalized relative path
-    return os.path.join(base_path, normalized_path)
+    if hasattr(sys, '_MEIPASS'):
+        # If the app is running in a PyInstaller bundle normalize path
+        # Normalize the path by replacing backslashes with forward slashes
+        normalized_path = relative_path.replace("/", "\\")
+        
+        # Get the base path depending on the context (development or bundled)
+        base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+        
+        # Join the base path with the normalized relative path
+        return os.path.join(base_path, normalized_path)
+    else:
+        # If running in a normal Python environment, don't
+        return relative_path
 
 def init_folders():
     """
