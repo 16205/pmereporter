@@ -97,6 +97,10 @@ def authenticate_to_ms_graph():
 
     # Function to handle the OAuth callback and extract the authorization code
     class Handler(http.server.SimpleHTTPRequestHandler):
+        def log_message(self, format, *args):
+            # Override to suppress console output
+            return
+        
         def do_GET(self):
             """
             Handles GET requests sent to the temporary web server. It extracts the authorization code from
