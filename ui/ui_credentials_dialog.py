@@ -19,25 +19,25 @@ class Ui_CredentialsDialog(object):
         self.MSCredentialsLabel.setFont(boldFont)
 
         # Add labels and line edits to layout
-        layout.addRow(self.ppmeCredentialsLabel, QtWidgets.QLabel(''))  # Section title
         self.ppmeEndpointEdit = QtWidgets.QLineEdit()
         self.ppmeAppkeyEdit = QtWidgets.QLineEdit()
         self.ppmeAuthTokenEdit = QtWidgets.QLineEdit()
         self.ppmeAuthTokenEdit.setEchoMode(QtWidgets.QLineEdit.EchoMode.Password)
 
+        layout.addRow(self.ppmeCredentialsLabel, QtWidgets.QLabel(''))  # Section title
         layout.addRow('PPME Endpoint', self.ppmeEndpointEdit)
         layout.addRow('PPME Appkey', self.ppmeAppkeyEdit)
         layout.addRow('PPME Auth Token', self.ppmeAuthTokenEdit)
 
-        layout.addRow(self.MSCredentialsLabel, QtWidgets.QLabel(''))  # Section title
         self.MSClientIdEdit = QtWidgets.QLineEdit()
         self.MSClientSecretEdit = QtWidgets.QLineEdit()
         self.MSClientSecretEdit.setEchoMode(QtWidgets.QLineEdit.EchoMode.Password)
         self.MSTenantIdEdit = QtWidgets.QLineEdit()
 
-        layout.addRow('Client ID:', self.MSClientIdEdit)
-        layout.addRow('Client Secret:', self.MSClientSecretEdit)
-        layout.addRow('Tenant ID:', self.MSTenantIdEdit)
+        layout.addRow(self.MSCredentialsLabel, QtWidgets.QLabel(''))  # Section title
+        layout.addRow('Client ID', self.MSClientIdEdit)
+        layout.addRow('Client Secret', self.MSClientSecretEdit)
+        layout.addRow('Tenant ID', self.MSTenantIdEdit)
 
         # Save button
         self.saveButton = QtWidgets.QPushButton('Save', Dialog)
