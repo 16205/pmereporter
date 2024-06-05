@@ -7,6 +7,7 @@
 
 from PyQt6 import QtCore, QtGui, QtWidgets
 from PyQt6.QtCore import QDate
+from PyQt6.QtWidgets import QMessageBox
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -17,6 +18,45 @@ class Ui_MainWindow(object):
         
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
+
+        # Create the menu bar
+        self.menuBar = QtWidgets.QMenuBar(MainWindow)
+        # self.menuBar.setGeometry(QtCore.QRect(0, 0, 500, 5))  # Adjust size accordingly
+        self.menuBar.setObjectName("menuBar")
+
+        # Create File menu
+        self.menuFile = QtWidgets.QMenu(self.menuBar)
+        self.menuFile.setTitle("File")
+
+        # Create Edit menu
+        self.menuEdit = QtWidgets.QMenu(self.menuBar)
+        self.menuEdit.setTitle("Edit")
+
+        # Create About menu
+        self.menuAbout = QtWidgets.QMenu(self.menuBar)
+        self.menuAbout.setTitle("About")
+
+        # Add menus to the menu bar
+        self.menuBar.addMenu(self.menuFile)
+        self.menuBar.addMenu(self.menuEdit)
+        self.menuBar.addMenu(self.menuAbout)
+
+        # Set the menu bar in the main window
+        MainWindow.setMenuBar(self.menuBar)
+
+        # Add actions to the File menu
+        self.actionExit = QtGui.QAction("Exit", MainWindow)
+        self.actionExit.setShortcut("Ctrl+Q")
+        self.actionExit.triggered.connect(MainWindow.close)
+        self.menuFile.addAction(self.actionExit)
+
+        def showAboutDialog():
+            QMessageBox.about(None, "About App", "PMEReporter version 0.9 - ©Vinçotte ASBL - 2024\n\nDeveloped by:\nGabriel Lohest\nglohest@vincotte.be\n+32 497 87 07 60")
+
+        # Add actions to the About menu
+        self.actionAbout = QtGui.QAction("About PMEReporter", MainWindow)
+        self.actionAbout.triggered.connect(showAboutDialog)
+        self.menuAbout.addAction(self.actionAbout)
 
         # ------------------ Tab widget ------------------
         self.tabWidget = QtWidgets.QTabWidget(MainWindow)
@@ -44,8 +84,6 @@ class Ui_MainWindow(object):
         self.horizontalLayout = QtWidgets.QHBoxLayout()
         self.genButton = QtWidgets.QPushButton("Generate Mission Orders")
         self.sendButton = QtWidgets.QPushButton("Send Mission Orders")
-        self.horizontalLayout.addWidget(self.genButton)
-        self.horizontalLayout.addWidget(self.sendButton)
         self.leftVerticalLayout.addLayout(self.horizontalLayout)
 
         # ------------------ Right side vertical layout ------------------
@@ -64,7 +102,8 @@ class Ui_MainWindow(object):
         self.dateSelector = QtWidgets.QDateEdit()
         self.dateSelector.setCalendarPopup(True)
         self.dateSelector.setDate(QDate.currentDate().addDays(1))
-        self.dateSelectorHorizontalLayout.addWidget(self.dateSelector, 1)
+        # self.dateSelector.setDate(QDate(2023, 11, 21))
+        self.dateSelectorHorizontalLayout.addWidget(self.dateSelector, 2)
         # Buttons for setting dates
         self.tomorrowButton = QtWidgets.QPushButton("Tomorrow")
         self.nextMondayButton = QtWidgets.QPushButton("Next Monday")
@@ -89,6 +128,8 @@ class Ui_MainWindow(object):
 
         self.fetchButton = QtWidgets.QPushButton("Load Missions")
         self.rightVerticalLayout.addWidget(self.fetchButton)
+        self.rightVerticalLayout.addWidget(self.genButton)
+        self.rightVerticalLayout.addWidget(self.sendButton)
 
         # Align right V Layout elements to top
         self.rightVerticalLayout.addStretch(1)
@@ -138,12 +179,3 @@ class Ui_MainWindow(object):
         self.genButton.setText(_translate("MainWindow", "Generate mission orders"))
         self.sendButton.setText(_translate("MainWindow", "Send mission orders"))
         self.checkSources.setText(_translate("MainWindow", "Check source conflicts"))
-
-if __name__ == "__main__":
-    import sys
-    app = QtWidgets.QApplication(sys.argv)
-    MainWindow = QtWidgets.QMainWindow()
-    ui = Ui_MainWindow()
-    ui.setupUi(MainWindow)
-    MainWindow.show()
-    sys.exit(app.exec())
