@@ -75,7 +75,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.actionCredentials = QAction("Credentials...", self)
         self.actionCredentials.setShortcut("Ctrl+K")
         self.menuEdit.addAction(self.actionCredentials)
-        self.actionCredentials.triggered.connect(self.openCredentialsDialog)
+        self.actionCredentials.triggered.connect(self.open_credentials_dialog)
 
         self.setupMissionTable() # Initialize the model for Mission tableView
         self.setupDepartmentTable() # Initialize the model for Department tableView
@@ -95,7 +95,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
         # Check credentials at startup
         if not self.credentials_are_valid():
-            self.show_credentials_dialog()
+            self.open_credentials_dialog()
 
         # Initialize user access token and full name
         main.init_user()
@@ -117,7 +117,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         # Check each required field is in the environment and its value is not empty
         return all(os.getenv(field) for field in required_fields)
 
-    def show_credentials_dialog(self):
+    def open_credentials_dialog(self):
         """Open the credentials dialog for user to fill in the credentials."""
         dialog = CredentialsDialog(self)
         dialog.exec()  # This will block until the dialog is closed
@@ -373,16 +373,20 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     # ------------------ Functions linked to buttons ------------------
 
     def fetch_data(self):
-        # Get the date from the dateSelector
-        selected_date = self.dateSelector.date().toPyDate()  # Converts QDate to Python date
-        departments = self.get_selected_items("departments") # Get departments
-        if departments == []:
-            QtWidgets.QMessageBox.warning(self, "No Selection", "Please select at least one department.")
-            return
-        self.current_task = 'fetch_and_store'  # Set the current task
-        self.message = 'Data loading'
+        # Check if credentials are available
+        if not self.credentials_are_valid():
+            self.open_credentials_dialog()
+        if self.credentials_are_valid():
+            # Get the date from the dateSelector
+            selected_date = self.dateSelector.date().toPyDate()  # Converts QDate to Python date
+            departments = self.get_selected_items("departments") # Get departments
+            if departments == []:
+                QtWidgets.QMessageBox.warning(self, "No Selection", "Please select at least one department.")
+                return
+            self.current_task = 'fetch_and_store'  # Set the current task
+            self.message = 'Data loading'
 
-        self.start_thread(self.current_task, self.message, selected_date, departments)
+            self.start_thread(self.current_task, self.message, selected_date, departments)
 
     def generate_mission_orders(self):
         selected_keys = self.get_selected_items("missions")
