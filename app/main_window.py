@@ -1,8 +1,9 @@
 from PyQt6 import QtWidgets
-from PyQt6.QtGui import QStandardItemModel, QStandardItem, QColor
+from PyQt6.QtGui import QStandardItemModel, QStandardItem, QColor, QAction
 from PyQt6.QtCore import QThread, pyqtSignal, Qt, QRect
 from PyQt6.QtWidgets import QProgressDialog, QMessageBox, QApplication, QStyle, QStyleOptionButton, QHeaderView
 from datetime import datetime
+from dotenv import load_dotenv
 import json
 import os
 import shutil
@@ -10,7 +11,8 @@ import subprocess
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from ui.ui_main_window import Ui_MainWindow
-import main
+from app import main
+from credentials_dialog import CredentialsDialog
 from modules import utils
 
 class CheckBoxHeader(QHeaderView):
@@ -70,6 +72,12 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         super().__init__(parent)  # Updated super call for Python 3
         self.setupUi(self)
         self.showMaximized()  # This line maximizes the window on startup
+
+        self.actionCredentials = QAction("Credentials...", self)
+        self.actionCredentials.setShortcut("Ctrl+K")
+        self.menuEdit.addAction(self.actionCredentials)
+        self.actionCredentials.triggered.connect(self.openCredentialsDialog)
+
         self.setupMissionTable() # Initialize the model for Mission tableView
         self.setupDepartmentTable() # Initialize the model for Department tableView
         self.setupSentTable() # Initialize the model for Sent Elements tableView
@@ -88,11 +96,37 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.syncButton.clicked.connect(self.sync_sent_elements)
         self.missionTableView.doubleClicked.connect(self.handleMissionDoubleClick)
 
+        # Check credentials at startup
+        if not self.credentials_are_valid():
+            self.show_credentials_dialog()
+        main.init_user()
+
     def exception_hook(exctype, value, traceback):
         QtWidgets.QMessageBox.critical(None, "Error", str(value))
         sys.__excepthook__(exctype, value, traceback)  # Optionally, re-raise the error to stop the program
 
     sys.excepthook = exception_hook
+
+    def credentials_are_valid(self):
+        """Check if necessary credentials are present and non-empty."""
+        required_fields = ['PPME_ENDPOINT', 'PPME_APPKEY', 'PPME_AUTH_TOKEN', 'MS_CLIENT_ID', 'MS_CLIENT_SECRET', 'MS_TENANT_ID']
+        
+        env_path = utils.get_env_path()
+        
+        load_dotenv(env_path)  # Load environment variables from .env file
+
+        # Check each required field is in the environment and its value is not empty
+        return all(os.getenv(field) for field in required_fields)
+
+    def show_credentials_dialog(self):
+        """Open the credentials dialog for user to fill in the credentials."""
+        dialog = CredentialsDialog(self)
+        dialog.exec()  # This will block until the dialog is closed
+
+    def openCredentialsDialog(self):
+        dialog = CredentialsDialog(self)
+        if dialog.exec():
+            pass
 
     def closeEvent(self, event):
         self.cleanUpFolders()
@@ -297,7 +331,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         # There are conflicts, show the detailed message and update the table
         self.load_data_to_mission_table("./temp/missions.json", conflicts)
         sources = "\n".join(f"• {key}" for key in conflicts.keys())
-        message = f"The following sources are booked several times:\n{sources}\nCheck missions overview for more information"
+        message = f"The following sources are booked several times:\n\n{sources}\n\nCheck missions overview for more information"
         QtWidgets.QMessageBox.warning(self, "Conflicts found!", message)
         
 
