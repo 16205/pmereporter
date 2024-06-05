@@ -413,8 +413,8 @@ def add_header_footer(canvas, doc):
     canvas.drawString(75, 30, footer_text)  # Adjust coordinates as needed
 
     # Logo image to include
-    logo1_path = "./media/Vincotte_RGB_H.png"
-    logo2_path = "./media/Member-Group-Kiwa-FC.jpg"
+    logo1_path = utils.resource_path("./media/Vincotte_RGB_H.png")
+    logo2_path = utils.resource_path("./media/Member-Group-Kiwa-FC.jpg")
     canvas.drawImage(logo1_path, 75, 759, width=52, height=52)  # Draw the first logo
     canvas.drawImage(logo2_path, 135, 760, width=62.28, height=30)  # Draw the second logo
     
