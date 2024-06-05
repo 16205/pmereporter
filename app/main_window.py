@@ -79,7 +79,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.setupMissionTable() # Initialize the model for Mission tableView
         self.setupDepartmentTable() # Initialize the model for Department tableView
-        self.setupSentTable() # Initialize the model for Sent Elements tableView
         self.current_task = None  # Add a variable to track the current task
         self.message = None # The message to display when the task is ongoing
         self.conflict_colors = {}  # Initialize the dictionary to store colors for each source
@@ -89,7 +88,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.fetchButton.clicked.connect(self.fetch_data)
         self.genButton.clicked.connect(self.generate_mission_orders)
         self.sendButton.clicked.connect(self.send_mission_orders)
-        self.syncButton.clicked.connect(self.sync_sent_elements)
         self.missionTableView.doubleClicked.connect(self.handleMissionDoubleClick)
 
         # self.cleanUpFolders()
@@ -123,11 +121,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         """Open the credentials dialog for user to fill in the credentials."""
         dialog = CredentialsDialog(self)
         dialog.exec()  # This will block until the dialog is closed
-
-    def openCredentialsDialog(self):
-        dialog = CredentialsDialog(self)
-        if dialog.exec():
-            pass
 
     def closeEvent(self, event):
         self.cleanUpFolders()
@@ -179,22 +172,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.missionTableView.horizontalHeader().setVisible(True)
         self.missionTableView.verticalHeader().setDefaultAlignment(Qt.AlignmentFlag.AlignCenter)
-
-    def setupSentTable(self):
-        # Initialize the model for tableView
-        self.sentModel = QStandardItemModel(self)
-        self.sentElementsTableView.setModel(self.sentModel)
-
-        # Set the table view to only allow checkbox changes
-        self.sentElementsTableView.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)  # Disable text editing
-        self.sentElementsTableView.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)  # Enable row selection
-
-        self.sentHeaders = ['Recipients', 'Subject', 'Sent Time']
-        self.sentModel.setHorizontalHeaderLabels(self.sentHeaders)
-
-        self.apply_styleSheet(self.sentElementsTableView)
-
-        self.sentElementsTableView.verticalHeader().hide()
 
     def handleMissionDoubleClick(self, index):
         # Extract the mission key from the selected row
@@ -334,7 +311,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         sources = "\n".join(f"• {key}" for key in conflicts.keys())
         message = f"The following sources are booked several times:\n\n{sources}\n\nCheck missions overview for more information"
         QtWidgets.QMessageBox.warning(self, "Conflicts found!", message)
-        
 
     def assign_colors_to_conflicts(self, conflicts):
         # Assign a unique color for each source
@@ -355,39 +331,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                     for col in range(self.missionModel.columnCount()):
                         item = self.missionModel.item(row, col)
                         item.setBackground(color)
-
-    def load_data_to_sent_table(self, file_path):
-        self.sentModel.clear()
-
-        # Load JSON data from a file
-        with open(file_path, 'r') as file:
-            data = json.load(file)
-
-        headers = self.sentHeaders
-        self.sentModel.setHorizontalHeaderLabels(headers)
-
-        # Assuming JSON data is a list of dictionaries
-        if data:
-            # Populate the rows of the table
-            for item in data:
-                row = []
-                recipients = "\n".join(f"{recipient}" for recipient in item.get('recipients').split(', '))
-                # Append other data
-                row.extend([
-                    QStandardItem(recipients),
-                    QStandardItem(item.get('subject')),
-                    QStandardItem(item.get('sent_time'))
-                ])
-                # Set vertical alignment for all items in the row
-                for cell in row:
-                    cell.setTextAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
-                self.sentModel.appendRow(row)
-                
-            # Resize columns and rows
-            for row in range(self.sentModel.rowCount()):
-                self.sentElementsTableView.setRowHeight(row, 60)
-            for column in range(self.sentModel.columnCount()):
-                self.sentElementsTableView.setColumnWidth(column, 400)
 
     # ------------------ Functions related to the worker call ------------------
 
@@ -419,8 +362,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 self.show_conflict_results(conflicts)
             else:
                 self.load_data_to_mission_table("./temp/missions.json")
-        elif self.current_task == 'sync_sent_elements':
-            self.load_data_to_sent_table("./temp/sentElements.json")
         self.progress_dialog.setValue(100)  # Update progress dialog to show completion
         self.current_task = None  # Reset current task
         self.message = None # Clear message
@@ -482,11 +423,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.message = 'Mission orders sending'
         self.start_thread(self.current_task, self.message, selected_keys)
 
-    def sync_sent_elements(self):
-        self.current_task = 'sync_sent_elements'
-        self.message = 'Syncing sent elements'
-        self.start_thread(self.current_task, self.message)
-
 class MissionTableModel(QStandardItemModel):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -518,8 +454,6 @@ class Worker(QThread):
                 main.generate(*self.args, progress_callback=self.handle_progress, **self.kwargs)
             elif self.task_type == 'send':
                 main.send(*self.args, progress_callback=self.handle_progress, **self.kwargs)
-            elif self.task_type =='sync_sent_elements':
-                main.get_sent_elements(*self.args, **self.kwargs)
         except Exception as e:
             self.error = True
             self.error_occurred.emit(str(e))  # Emit the error message

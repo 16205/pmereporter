@@ -141,21 +141,7 @@ class Ui_MainWindow(object):
         # ------------------ Second tab ------------------
         self.tab2 = QtWidgets.QWidget()
         self.tab2.setObjectName("tab2")
-        self.tabWidget.addTab(self.tab2, "Sent mission orders")
-
-        # ------------------ Second tab vertical layout ----------------
-        self.tab2layout = QtWidgets.QVBoxLayout(self.tab2) # Assign layout to the tab
-        self.titleLabel = QtWidgets.QLabel("Sent elements")
-        self.titleLabel.setFont(QtGui.QFont("Arial", 12))
-
-        self.sentElementsTableView = QtWidgets.QTableView()
-        self.sentElementsTableView.setObjectName("Sent elements")
-
-        self.syncButton = QtWidgets.QPushButton("Sync")
-
-        self.tab2layout.addWidget(self.titleLabel)
-        self.tab2layout.addWidget(self.sentElementsTableView)
-        self.tab2layout.addWidget(self.syncButton)
+        # self.tabWidget.addTab(self.tab2, "PLACEHOLDER")
 
         MainWindow.setCentralWidget(self.tabWidget)
         self.statusbar = QtWidgets.QStatusBar(MainWindow)
