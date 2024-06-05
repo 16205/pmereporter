@@ -169,6 +169,6 @@ reqsim.py
 testSHP.py
 temp
 
-.env_old
+.env.old
 
 test2.py
