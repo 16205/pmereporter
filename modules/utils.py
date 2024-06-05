@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from dotenv import load_dotenv
+from dotenv import load_dotenv, set_key
 from reportlab.platypus import Paragraph
 import json
 import os
@@ -7,43 +7,28 @@ import re
 import regex
 import sys
 
-def update_env_var(value:str, key:str):
+def update_env_var(value: str, key: str):
     """
     Updates a specific environment variable in the .env file.
 
-    This function reads the contents of the .env file, searches for a line starting with the given key,
-    and updates its value. If the key is not found, a new line is appended to the .env file.
+    This function uses the `load_dotenv` and `set_key` functions from the `dotenv` library to load the current
+    contents of the .env file, update the specified environment variable with the given value, and save the updated
+    .env file.
 
     Parameters:
-    - value (str): The new value to be assigned to the environment variable.
-    - key (str): The key of the environment variable to be updated.
+    - value (str): The new value to assign to the specified environment variable.
+    - key (str): The name of the environment variable to update.
 
     Returns:
     - None
     """
-    env_file_path = resource_path('../.env')
+    env_file_path = get_env_path()
 
-    # Read the current contents of the .env file
-    with open(env_file_path, 'r') as file:
-        lines = file.readlines()
+    # Load the current contents of the .env file
+    load_dotenv(env_file_path)
 
-    # Update the [token_key] line
-    updated_lines = []
-    token_found = False
-    for line in lines:
-        if line.startswith(key):
-            updated_lines.append(f'{key}=\"{value}\"\n')
-            token_found = True
-        else:
-            updated_lines.append(line)
-    
-    # Append the [token_key] line if it wasn't found
-    if not token_found:
-        updated_lines.append(f'{key}=\"{value}\"\n')
-
-    # Write the updated content back to the .env file
-    with open(env_file_path, 'w') as file:
-        file.writelines(updated_lines)
+    # Update the environment variable in the .env file
+    set_key(env_file_path, key, value)
 
 def iso_to_datetime(datestring:str):
     """
