@@ -1,32 +1,11 @@
 from datetime import datetime, timedelta
-from dotenv import load_dotenv
 from . import auth
-from tqdm import tqdm
 import base64
 import os
 import pytz
 import requests
 import sys
-
-def init_ppme_api_variables():
-    """
-    Load environment variables from.env file and initialize variables for PlanningPME API connection.
-
-    Returns:
-        connection_str (str): URL for PlanningPME API endpoint
-        headers (dict): Dictionary of headers for PlanningPME API requests
-    """
-    load_dotenv(override=True)
-
-    connection_str = os.environ['PPME_ENDPOINT'] + 'api/'
-
-    headers = {
-        'Authorization': 'Bearer ' + os.environ['PPME_BEARER_TOKEN'],
-        'X-APPKEY': os.environ['PPME_APPKEY'],
-        'Content-Type': 'application/json'
-    }
-
-    return connection_str, headers
+from . import utils
 
 def get_events(dateFrom:datetime, dateTo:datetime=None, departments:list=None, resources:list=None, 
                categories:list=[52,55,60,63,65,66,76,77,81,82]):
@@ -53,7 +32,7 @@ def get_events(dateFrom:datetime, dateTo:datetime=None, departments:list=None, r
         SystemExit: If the API returns any other status code indicating failure, the program will exit with an error message.
     """
     
-    connection_str, headers = init_ppme_api_variables()
+    connection_str, headers = utils.init_ppme_api_variables()
 
     dateFrom, dateTo = dateFrom.isoformat(), dateTo.isoformat()
     
@@ -65,13 +44,9 @@ def get_events(dateFrom:datetime, dateTo:datetime=None, departments:list=None, r
         "results": "Task",
         "tasks": departments,
     }
-    # TODO: calculate datetime 1 day diff
-    # TODO: use kwargs
 
     # print("Getting mission events...")
-    # TODO: handle error if bad bearer token and other errors
     response = requests.post(connection_str + 'do/list', headers=headers, json=json)
-
     if response.status_code == 200:
         # Return response content only (this is why .json() is used)
         # print(f"Got {len(response.json()['items'])} mission events!")
@@ -106,7 +81,7 @@ def get_locations(missions:list, min:int, max:int, progress_callback=None):
                     or if the API returns any other status code indicating failure.
     """
     
-    connection_str, headers = init_ppme_api_variables()
+    connection_str, headers = utils.init_ppme_api_variables()
     # Variables for process tracking
     total_missions = len(missions)
     processed_count = 0
@@ -196,7 +171,7 @@ def get_sources():
     return sources
 
 def get_departments(id:int=None):
-    connection_str, headers = init_ppme_api_variables()
+    connection_str, headers = utils.init_ppme_api_variables()
     params = {
         "pageSize": 999
     }
@@ -210,7 +185,7 @@ def get_departments(id:int=None):
     return response
 
 def get_categories():
-    connection_str, headers = init_ppme_api_variables()
+    connection_str, headers = utils.init_ppme_api_variables()
     response = requests.get(connection_str + 'category', headers=headers)
 
     return response
@@ -323,3 +298,28 @@ def transform_sharepoint_url(sharepoint_url, access_token):
     drive_item_info = response.json()
     
     return drive_item_info
+
+def get_user_details(access_token):
+    # Define the endpoint for getting user details
+    url = "https://graph.microsoft.com/v1.0/me"
+    
+    # Set the headers including the access token for authorization
+    headers = {
+        'Authorization': f'Bearer {access_token}'
+    }
+    
+    # Make the GET request to the Microsoft Graph API
+    response = requests.get(url, headers=headers)
+    
+    # Check if the request was successful
+    if response.status_code == 200:
+        # Parse the JSON response
+        user_data = response.json()
+        # Extract first name and last name
+        first_name = user_data.get('givenName')
+        last_name = user_data.get('surname')
+        name = first_name + ' ' + last_name
+        utils.update_env_var(name, 'MS_USER_NAME')
+    else:
+        # Handle error
+        response.raise_for_status()
