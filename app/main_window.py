@@ -9,10 +9,9 @@ import os
 import shutil
 import subprocess
 import sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from ui.ui_main_window import Ui_MainWindow
 from app import main
-from credentials_dialog import CredentialsDialog
+from .credentials_dialog import CredentialsDialog
 from modules import utils
 
 class CheckBoxHeader(QHeaderView):
@@ -86,9 +85,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.conflict_colors = {}  # Initialize the dictionary to store colors for each source
         self.color_index = 0  # Initialize the index for assigning colors
 
-        # self.cleanUpFolders()
-        utils.init_folders()
-
         # Connect buttons to functions
         self.fetchButton.clicked.connect(self.fetch_data)
         self.genButton.clicked.connect(self.generate_mission_orders)
@@ -96,9 +92,14 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.syncButton.clicked.connect(self.sync_sent_elements)
         self.missionTableView.doubleClicked.connect(self.handleMissionDoubleClick)
 
+        # self.cleanUpFolders()
+        utils.init_folders()
+
         # Check credentials at startup
         if not self.credentials_are_valid():
             self.show_credentials_dialog()
+
+        # Initialize user access token and full name
         main.init_user()
 
     def exception_hook(exctype, value, traceback):
