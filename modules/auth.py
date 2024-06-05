@@ -2,7 +2,7 @@ from dotenv import load_dotenv
 from msal import ConfidentialClientApplication
 from office365.runtime.auth.client_credential import ClientCredential
 from office365.sharepoint.client_context import ClientContext
-from .utils import update_token_env
+from .utils import update_env_var
 import http.server
 import os
 import requests
@@ -42,7 +42,7 @@ def authenticate_to_ppme():
         data = response.json()
         # Using '.get()' so it returns {} if key 'access_token' does not exist
         bearer_token = data.get('access_token', {})
-        update_token_env(bearer_token, 'PPME_BEARER_TOKEN')
+        update_env_var(bearer_token, 'PPME_BEARER_TOKEN')
         # print("Successfully authenticated")
         return
     else:
@@ -153,8 +153,9 @@ def authenticate_to_ms_graph():
     if authorization_code:
         result = app.acquire_token_by_authorization_code(authorization_code, scopes=SCOPE)
         if result and 'access_token' in result and 'refresh_token' in result:
-            update_token_env(result['access_token'], 'MS_ACCESS_TOKEN')
-            update_token_env(result['refresh_token'], 'MS_REFRESH_TOKEN')
+            update_env_var(result['access_token'], 'MS_ACCESS_TOKEN')
+            update_env_var(result['refresh_token'], 'MS_REFRESH_TOKEN')
+        
             # print('Token acquired')
             return result
         else:
@@ -196,8 +197,8 @@ def refresh_access_token():
         response = requests.post(token_url, headers=headers, data=body)
         response.raise_for_status()
         new_tokens = response.json()
-        update_token_env(new_tokens.get('access_token'), 'MS_ACCESS_TOKEN')
-        update_token_env(new_tokens.get('refresh_token'), 'MS_REFRESH_TOKEN')
+        update_env_var(new_tokens.get('access_token'), 'MS_ACCESS_TOKEN')
+        update_env_var(new_tokens.get('refresh_token'), 'MS_REFRESH_TOKEN')
     except requests.exceptions.HTTPError:
         new_tokens = authenticate_to_ms_graph()
     return new_tokens['access_token']
