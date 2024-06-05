@@ -1,7 +1,8 @@
 from dotenv import load_dotenv, set_key, dotenv_values
 from modules import utils
 from ui.ui_credentials_dialog import Ui_CredentialsDialog
-from PyQt6 import QtWidgets, QtGui
+from PyQt6 import QtWidgets
+from . import main
 import os
 
 class CredentialsDialog(QtWidgets.QDialog, Ui_CredentialsDialog):
@@ -60,6 +61,9 @@ class CredentialsDialog(QtWidgets.QDialog, Ui_CredentialsDialog):
                     set_key(self.env_path, key, new_value)
                     changes = True
 
+        # Initialize user access token and full name
+        main.init_user()
+        
         # Close the dialog only if changes were made
         if changes:
             self.accept()

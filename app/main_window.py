@@ -93,13 +93,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         # self.cleanUpFolders()
         utils.init_folders()
 
-        # Check credentials at startup
-        if not self.credentials_are_valid():
-            self.open_credentials_dialog()
-
-        # Initialize user access token and full name
-        main.init_user()
-
     def exception_hook(exctype, value, traceback):
         QtWidgets.QMessageBox.critical(None, "Error", str(value))
         sys.__excepthook__(exctype, value, traceback)  # Optionally, re-raise the error to stop the program
