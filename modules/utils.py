@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from dotenv import load_dotenv
 from reportlab.platypus import Paragraph
 import json
 import os
@@ -6,19 +7,7 @@ import re
 import regex
 import sys
 
-def update_token_env(new_token:str, token_key:str):
-    """
-    Updates or adds a token in the .env file.
-
-    This function searches for a specific token key in the .env file and updates its value. If the token key does not exist, it appends the key and value to the file.
-
-    Parameters:
-    - new_token (str): The new value for the token.
-    - token_key (str): The key of the token to be updated or added.
-
-    Returns:
-    - None
-    """
+def update_env_var(value:str, key:str):
     env_file_path = resource_path('../.env')
 
     # Read the current contents of the .env file
@@ -29,15 +18,15 @@ def update_token_env(new_token:str, token_key:str):
     updated_lines = []
     token_found = False
     for line in lines:
-        if line.startswith(token_key):
-            updated_lines.append(f'{token_key} = \'{new_token}\'\n')
+        if line.startswith(key):
+            updated_lines.append(f'{key} = \"{value}\"\n')
             token_found = True
         else:
             updated_lines.append(line)
     
     # Append the [token_key] line if it wasn't found
     if not token_found:
-        updated_lines.append(f'{token_key}={new_token}\n')
+        updated_lines.append(f'{key}=\"{value}\"\n')
 
     # Write the updated content back to the .env file
     with open(env_file_path, 'w') as file:
@@ -265,3 +254,33 @@ def init_folders():
         os.makedirs(resource_path('../temp'))
     if not os.path.exists(resource_path('../generated')):
         os.makedirs(resource_path('../generated'))
+
+def get_env_path():
+        # Get the path to the directory where the executable is located
+        if hasattr(sys, '_MEIPASS'):
+            # If the app is running in a PyInstaller bundle, use the temporary directory
+            return os.path.join(sys._MEIPASS, '.env')
+        else:
+            # If running in a normal Python environment, use the current working directory
+            return os.path.join(os.getcwd(), '.env')
+        
+def init_ppme_api_variables():
+    """
+    Load environment variables from.env file and initialize variables for PlanningPME API connection.
+
+    Returns:
+        connection_str (str): URL for PlanningPME API endpoint
+        headers (dict): Dictionary of headers for PlanningPME API requests
+    """
+    env_path = get_env_path()
+
+    load_dotenv(env_path, override=True)
+
+    connection_str = os.environ['PPME_ENDPOINT'] + 'api/'
+
+    headers = {
+        'Authorization': 'Bearer ' + os.environ['PPME_BEARER_TOKEN'],
+        'X-APPKEY': os.environ['PPME_APPKEY'],
+        'Content-Type': 'application/json'
+    }
+    return connection_str, headers
