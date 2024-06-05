@@ -69,6 +69,8 @@ def send_email(subject:str, recipients:list, content:str, file_paths:list=None, 
             access_token = auth.refresh_access_token()
             headers['Authorization'] = f'Bearer {access_token}'
             response = requests.post(SENDMAIL_ENDPOINT, headers=headers, json=email_data)
+            if response.status_code == 403:
+                raise Exception(f"The authenticated user is not authorized to use the 'NDTplanning@vincotte.be' email address to send generate mission orders. Please ask ICT to grant access to 'NDTplanning@vincotte.be' for your account, 'avXXXX@vincotte.org'.")
             response.raise_for_status()
-        except Exception as e:
-            raise e(f"Failed to send email to {[recipient for recipient in recipients]}. {response.status_code} {response.reason}")
+        except requests.exceptions.HTTPError:
+            raise Exception(f"Failed to send email to {[recipient for recipient in recipients]}. {response.status_code} {response.reason}")
