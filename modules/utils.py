@@ -8,6 +8,19 @@ import regex
 import sys
 
 def update_env_var(value:str, key:str):
+    """
+    Updates a specific environment variable in the .env file.
+
+    This function reads the contents of the .env file, searches for a line starting with the given key,
+    and updates its value. If the key is not found, a new line is appended to the .env file.
+
+    Parameters:
+    - value (str): The new value to be assigned to the environment variable.
+    - key (str): The key of the environment variable to be updated.
+
+    Returns:
+    - None
+    """
     env_file_path = resource_path('../.env')
 
     # Read the current contents of the .env file
@@ -19,7 +32,7 @@ def update_env_var(value:str, key:str):
     token_found = False
     for line in lines:
         if line.startswith(key):
-            updated_lines.append(f'{key} = \"{value}\"\n')
+            updated_lines.append(f'{key}=\"{value}\"\n')
             token_found = True
         else:
             updated_lines.append(line)
