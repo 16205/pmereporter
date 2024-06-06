@@ -295,7 +295,7 @@ def init_ppme_api_variables():
     }
     return connection_str, headers
 
-def credentials_are_valid(self):
+def credentials_are_valid():
     """Check if necessary credentials are present and non-empty."""
     # Fields stored in the environment
     env_required_fields = ['PPME_ENDPOINT', 'MS_CLIENT_ID', 'MS_TENANT_ID']
