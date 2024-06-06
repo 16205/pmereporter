@@ -133,19 +133,6 @@ def check_sources_conflicts():
         result = process.check_sources_double_bookings(missions)
     return result
 
-def get_sent_elements():
-    try:
-        load_dotenv(env_path)
-        access_token = os.environ.get('MS_ACCESS_TOKEN')
-        utils.save_to_json('temp/sentElements.json', ingest.get_sent_elements(access_token))
-    except ValueError:
-        try:
-            access_token = auth.refresh_access_token()
-            utils.save_to_json('temp/sentElements.json', ingest.get_sent_elements(access_token))
-        except ValueError:
-            access_token = auth.authenticate_to_ms_graph()['access_token']
-            utils.save_to_json('temp/sentElements.json', ingest.get_sent_elements(access_token))
-
 # fetch_and_store(date, ['South'])
 # generate(None)
 # send(None)
