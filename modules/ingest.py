@@ -130,6 +130,7 @@ def get_locations(missions:list, min:int, max:int, progress_callback=None):
     return missions
 
 def get_sources():
+    # TODO: replace with use of Microsoft Graph API
     """
     Retrieves a list of sources from a SharePoint list named "Sources".
 
