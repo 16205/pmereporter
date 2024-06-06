@@ -1,7 +1,9 @@
 from datetime import datetime, timedelta
 from dotenv import load_dotenv, set_key
+from modules import auth, ingest
 from reportlab.platypus import Paragraph
 import json
+import keyring
 import os
 import re
 import regex
@@ -287,3 +289,40 @@ def init_ppme_api_variables():
         'Content-Type': 'application/json'
     }
     return connection_str, headers
+
+def credentials_are_valid(self):
+    """Check if necessary credentials are present and non-empty."""
+    # Fields stored in the environment
+    env_required_fields = ['PPME_ENDPOINT', 'MS_CLIENT_ID', 'MS_TENANT_ID']
+
+    # Fields stored in the keyring
+    keyring_required_fields = {
+        'PPME_APPKEY': 'pmereporter',
+        'PPME_AUTH_TOKEN': 'pmereporter',
+        'MS_CLIENT_SECRET': 'pmereporter'
+    }
+
+    # Load .env environment variables
+    env_path = get_env_path()
+    load_dotenv(env_path)
+
+    # Check environment variables
+    all_env_fields_valid = all(os.getenv(field) for field in env_required_fields)
+
+    # Check keyring fields
+    all_keyring_fields_valid = True
+    for field, service_name in keyring_required_fields.items():
+        if not keyring.get_password(service_name, field):
+            all_keyring_fields_valid = False
+            break
+    return all_env_fields_valid and all_keyring_fields_valid
+
+def init_user():
+    env_path = get_env_path()
+    load_dotenv(env_path)
+    access_token = os.environ.get('MS_ACCESS_TOKEN')
+    if not access_token:
+        access_token = auth.authenticate_to_ms_graph()['access_token']
+    else:
+        access_token = auth.refresh_access_token()
+    ingest.get_user_details(access_token)
