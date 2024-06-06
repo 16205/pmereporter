@@ -99,17 +99,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
     sys.excepthook = exception_hook
 
-    def credentials_are_valid(self):
-        """Check if necessary credentials are present and non-empty."""
-        required_fields = ['PPME_ENDPOINT', 'PPME_APPKEY', 'PPME_AUTH_TOKEN', 'MS_CLIENT_ID', 'MS_CLIENT_SECRET', 'MS_TENANT_ID']
-        
-        env_path = utils.get_env_path()
-        
-        load_dotenv(env_path)  # Load environment variables from .env file
-
-        # Check each required field is in the environment and its value is not empty
-        return all(os.getenv(field) for field in required_fields)
-
     def open_credentials_dialog(self):
         """Open the credentials dialog for user to fill in the credentials."""
         dialog = CredentialsDialog(self)
@@ -367,9 +356,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def fetch_data(self):
         # Check if credentials are available
-        if not self.credentials_are_valid():
+        if not utils.credentials_are_valid():
             self.open_credentials_dialog()
-        if self.credentials_are_valid():
+        if utils.credentials_are_valid():
             # Get the date from the dateSelector
             selected_date = self.dateSelector.date().toPyDate()  # Converts QDate to Python date
             departments = self.get_selected_items("departments") # Get departments
