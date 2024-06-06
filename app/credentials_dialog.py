@@ -1,9 +1,9 @@
-from dotenv import load_dotenv, set_key, dotenv_values
-from modules import utils
-from ui.ui_credentials_dialog import Ui_CredentialsDialog
-from PyQt6 import QtWidgets
-from . import main
 import os
+import keyring
+from modules import utils
+from dotenv import load_dotenv, set_key
+from PyQt6 import QtWidgets
+from ui.ui_credentials_dialog import Ui_CredentialsDialog
 
 class CredentialsDialog(QtWidgets.QDialog, Ui_CredentialsDialog):
     def __init__(self, parent=None):
@@ -13,8 +13,8 @@ class CredentialsDialog(QtWidgets.QDialog, Ui_CredentialsDialog):
         # Define the path to the .env file
         self.env_path = utils.get_env_path()
 
-        # Initialize environment variables
-        self.env_vars = self.load_env_vars()
+        # Load environment variables
+        load_dotenv(self.env_path)
 
         # Create line edits for credentials input
         self.setup_inputs()
@@ -22,48 +22,35 @@ class CredentialsDialog(QtWidgets.QDialog, Ui_CredentialsDialog):
         self.saveButton.clicked.connect(self.save_credentials)
 
     def setup_inputs(self):
-        self.ppmeEndpointEdit.setText(self.env_vars.get('PPME_ENDPOINT'))
-        self.ppmeAppkeyEdit.setText(self.env_vars.get('PPME_APPKEY'))
-        if 'PPME_AUTH_TOKEN' in self.env_vars and self.env_vars['PPME_AUTH_TOKEN']:
-            self.ppmeAuthTokenEdit.setPlaceholderText("[unchanged]")
-        self.MSClientIdEdit.setText(self.env_vars.get('MS_CLIENT_ID'))
-        if 'MS_CLIENT_SECRET' in self.env_vars and self.env_vars['MS_CLIENT_SECRET']:
-            self.MSClientSecretEdit.setPlaceholderText("[unchanged]")
-        self.MSTenantIdEdit.setText(self.env_vars.get('MS_TENANT_ID'))
+        # Load non-sensitive data from environment variables directly
+        self.ppmeEndpointEdit.setText(os.getenv('PPME_ENDPOINT'))
+        self.MSClientIdEdit.setText(os.getenv('MS_CLIENT_ID'))
+        self.MSTenantIdEdit.setText(os.getenv('MS_TENANT_ID'))
 
-    def load_env_vars(self):
-        load_dotenv(self.env_path)  # Load environment variables from the specified .env file
-        return {key: value for key, value in os.environ.items() if key in [
-            'PPME_ENDPOINT', 'PPME_APPKEY', 'PPME_AUTH_TOKEN', 'MS_CLIENT_ID', 'MS_CLIENT_SECRET', 'MS_TENANT_ID']}
+        # Load sensitive data from keyring
+        self.ppmeAppkeyEdit.setText(keyring.get_password('pmereporter', 'PPME_APPKEY'))
+        self.ppmeAuthTokenEdit.setPlaceholderText("[unchanged]" if keyring.get_password('pmereporter', 'PPME_AUTH_TOKEN') else "")
+        self.MSClientSecretEdit.setPlaceholderText("[unchanged]" if keyring.get_password('pmereporter', 'MS_CLIENT_SECRET') else "")
 
     def save_credentials(self):
-        current_credentials = dotenv_values(self.env_path)  # Load the existing credentials
-        changes = False
-        
-        # Initialize edits dictionary with all current credentials
-        edits = dict(current_credentials)
+        # Save non-sensitive data to .env
+        changes = set_key(self.env_path, 'PPME_ENDPOINT', self.ppmeEndpointEdit.text()) or \
+                  set_key(self.env_path, 'MS_CLIENT_ID', self.MSClientIdEdit.text()) or \
+                  set_key(self.env_path, 'MS_TENANT_ID', self.MSTenantIdEdit.text())
 
-        # Update the dictionary with new values if they have been changed
-        new_values = {
-            'PPME_ENDPOINT': self.ppmeEndpointEdit.text(),
-            'PPME_APPKEY': self.ppmeAppkeyEdit.text(),
-            'PPME_AUTH_TOKEN': self.ppmeAuthTokenEdit.text(),
-            'MS_CLIENT_ID': self.MSClientIdEdit.text(),
-            'MS_CLIENT_SECRET': self.MSClientSecretEdit.text(),
-            'MS_TENANT_ID': self.MSTenantIdEdit.text(),
-        }
+        # Save sensitive data to keyring if changed
+        if self.ppmeAppkeyEdit.text() and self.ppmeAppkeyEdit.text() != "[unchanged]":
+            keyring.set_password('pmereporter', 'PPME_APPKEY', self.ppmeAppkeyEdit.text())
+            changes = True
+        if self.ppmeAuthTokenEdit.text() and self.ppmeAuthTokenEdit.text() != "[unchanged]":
+            keyring.set_password('pmereporter', 'PPME_AUTH_TOKEN', self.ppmeAuthTokenEdit.text())
+            changes = True
+        if self.MSClientSecretEdit.text() and self.MSClientSecretEdit.text() != "[unchanged]":
+            keyring.set_password('pmereporter', 'MS_CLIENT_SECRET', self.MSClientSecretEdit.text())
+            changes = True
 
-        # Apply new values only if they have been changed from the original
-        for key, new_value in new_values.items():
-            if new_value and new_value != "[unchanged]":  # Ensure new_value is not placeholder or empty
-                if current_credentials.get(key, '') != new_value:
-                    edits[key] = new_value
-                    set_key(self.env_path, key, new_value)
-                    changes = True
-
-        # Initialize user access token and full name
-        main.init_user()
-        
-        # Close the dialog only if changes were made
         if changes:
-            self.accept()
+            self.accept()  # Close the dialog only if changes were made
+
+        if utils.credentials_are_valid():
+            utils.init_user()

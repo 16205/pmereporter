@@ -4,6 +4,7 @@ from office365.runtime.auth.client_credential import ClientCredential
 from office365.sharepoint.client_context import ClientContext
 from .utils import update_env_var
 import http.server
+import keyring
 import os
 import requests
 import socketserver
@@ -13,42 +14,49 @@ import webbrowser
 
 def authenticate_to_ppme():
     """
-    Authenticates to the PPME api service using the APPKEY and AUTH_TOKEN environment variables.
-    Upon successful authentication, updates the environment variable for the bearer token
-    using the utility function `update_token_env`.
+    Authenticates to the PPME api service using the APPKEY and AUTH_TOKEN securely fetched from the keyring.
+    Upon successful authentication, updates the environment variable for the bearer token using the utility function `update_token_env`.
 
-    The function sends a PUT request to the PPME service with the necessary authentication
-    details and handles the response. If the authentication is successful, it updates the
-    bearer token in the environment. If the authentication fails, it logs the failure.
+    The function sends a PUT request to the PPME service with the necessary authentication details and handles the response.
+    If the authentication is successful, it updates the bearer token in the environment.
+    If the authentication fails, it logs the failure.
 
     Returns:
-        None. The function directly updates the environment variable for the bearer token
-        upon successful authentication or logs an error message upon failure.
+        None. The function directly updates the environment variable for the bearer token upon successful authentication or logs an error message upon failure.
     """
+    load_dotenv(override=True)  # Ensure latest .env settings are loaded, such as the endpoint
     
-    load_dotenv(override=True)
-    connection_str = os.environ['PPME_ENDPOINT'] + 'token'
-    headers = {
-        'X-APPKEY': os.environ['PPME_APPKEY']
-    }
+    appkey = keyring.get_password('pmereporter', 'PPME_APPKEY') 
+    auth_token = keyring.get_password('pmereporter', 'PPME_AUTH_TOKEN')
 
-    response = requests.put(connection_str, headers=headers, 
-                            data={'grant_type': 'urn:ietf:params:oauth:grant-type:jwt-bearer', 
-                                'assertion': os.environ['PPME_AUTH_TOKEN']})
+    if not appkey or not auth_token:
+        raise Exception("API Key or Auth Token is missing")
+
+    connection_str = os.environ['PPME_ENDPOINT'] + 'token'
+    headers = {'X-APPKEY': appkey}
+
+    response = requests.put(connection_str, headers=headers, data={
+        'grant_type': 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+        'assertion': auth_token
+    })
 
     # Check if the request was successful
     if response.status_code == 200:
         # Parse the response data
         data = response.json()
         # Using '.get()' so it returns {} if key 'access_token' does not exist
-        bearer_token = data.get('access_token', {})
-        update_env_var(bearer_token, 'PPME_BEARER_TOKEN')
-        # print("Successfully authenticated")
-        return
+        bearer_token = data.get('access_token', '')
+        if bearer_token:
+            update_env_var('PPME_BEARER_TOKEN', bearer_token)
+            # print("Successfully authenticated")
+            return
+        else:
+            raise Exception("Failed to retrieve bearer token")
     else:
-        raise Exception
+        raise Exception(f"Authentication failed: {response.status_code} {response.text}")
 
 def authenticate_to_shpt():
+    # TODO: Replace this with use of Microsoft Graph API
     """
     Authenticates to a SharePoint site using the client credentials flow.
 
@@ -63,7 +71,10 @@ def authenticate_to_shpt():
     load_dotenv(override=True)
     site_url = os.environ['SHP_SITE_URL']
     client_id = os.environ['MS_CLIENT_ID']
-    client_secret = os.environ['MS_CLIENT_SECRET']
+    client_secret = keyring.get_password('pmereporter', 'MS_CLIENT_SECRET')  # Securely fetch the client secret
+
+    if not client_secret:
+        raise Exception("Client secret is missing or not set in the keyring.")
 
     client_credential = ClientCredential(client_id, client_secret)
     ctx = ClientContext(site_url).with_credentials(client_credential)
@@ -87,7 +98,10 @@ def authenticate_to_ms_graph():
     load_dotenv(override=True)
     # Constants
     CLIENT_ID = os.environ['MS_CLIENT_ID']
-    CLIENT_SECRET = os.environ['MS_CLIENT_SECRET']
+    CLIENT_SECRET = keyring.get_password('pmereporter', 'MS_CLIENT_SECRET')  # Securely fetch the client secret
+
+    if not CLIENT_SECRET:
+        raise Exception("Client secret is missing or not set in the keyring.")
     TENANT_ID = os.environ['MS_TENANT_ID']
     AUTHORITY_URL = f'https://login.microsoftonline.com/{TENANT_ID}'
     SCOPE = ['Mail.Send', 'User.Read', 'Files.Read', 'Sites.Read.All']
@@ -183,7 +197,10 @@ def refresh_access_token():
     load_dotenv(override=True)
 
     CLIENT_ID = os.environ['MS_CLIENT_ID']
-    CLIENT_SECRET = os.environ['MS_CLIENT_SECRET']
+    CLIENT_SECRET = keyring.get_password('your_application', 'MS_CLIENT_SECRET')  # Securely fetch the client secret
+
+    if not CLIENT_SECRET:
+        raise Exception("Client secret is missing or not set in the keyring.")
     TENANT_ID = os.environ['MS_TENANT_ID']
     refresh_token = os.environ['MS_REFRESH_TOKEN']
     token_url = f"https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token"
