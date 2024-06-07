@@ -271,7 +271,7 @@ def get_env_path():
         
 def init_ppme_api_variables():
     """
-    Load environment variables from .env file and initialize variables for PlanningPME API connection.
+    Load environment variables and initialize variables for PlanningPME API connection.
     Retrieves sensitive data such as APPKEY from keyring.
 
     Returns:
@@ -281,10 +281,10 @@ def init_ppme_api_variables():
     env_path = get_env_path()
 
     load_dotenv(env_path, override=True)
-
+    
     connection_str = os.getenv('PPME_ENDPOINT') + 'api/'
-    ppme_appkey = keyring.get_password('your_application', 'PPME_APPKEY')  # Securely fetch the APPKEY
 
+    ppme_appkey = keyring.get_password('pmereporter', 'PPME_APPKEY')  # Securely fetch the APPKEY
     if not ppme_appkey:
         raise Exception("APPKEY is missing or not set in the keyring.")
 
