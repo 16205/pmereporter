@@ -40,7 +40,7 @@ def fetch_and_store(date:datetime = None, departments:list=None, progress_callba
     # Adjust the progress callback to fit the specified min-max% range
     def adjusted_progress(inner_progress, min, max):
         # Map inner_progress from 0-100% to min-max% of the overall progress
-        mapped_progress = int(min + (float(inner_progress) * (max-min)))
+        mapped_progress = int(min + (float(inner_progress) * (max - min)))
         if progress_callback:
             progress_callback(mapped_progress)
 
@@ -59,7 +59,7 @@ def fetch_and_store(date:datetime = None, departments:list=None, progress_callba
             access_token = auth.authenticate_to_ms_graph()
             missions = ingest.download_sharepoint_file(missions, access_token, 5, 30, adjusted_progress)
 
-    current_progress = 30  # Increment to 20% after cleaning data and downloading attachments
+    current_progress = 30  # Increment to 30% after cleaning data and downloading attachments
 
     missions = ingest.get_locations(missions, 30, 90, adjusted_progress)
     current_progress = 90  # After get_locations, we're at 90%
