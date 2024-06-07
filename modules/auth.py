@@ -35,10 +35,13 @@ def authenticate_to_ppme():
     connection_str = os.environ['PPME_ENDPOINT'] + 'token'
     headers = {'X-APPKEY': appkey}
 
-    response = requests.put(connection_str, headers=headers, data={
-        'grant_type': 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-        'assertion': auth_token
-    })
+    try:
+        response = requests.put(connection_str, headers=headers, data={
+            'grant_type': 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+            'assertion': auth_token
+        })
+    except Exception:
+        raise Exception('It seems you are not connected to the internet. Please try again after connecting.')
 
     # Check if the request was successful
     if response.status_code == 200:
@@ -197,7 +200,7 @@ def refresh_access_token():
     load_dotenv(override=True)
 
     CLIENT_ID = os.environ['MS_CLIENT_ID']
-    CLIENT_SECRET = keyring.get_password('your_application', 'MS_CLIENT_SECRET')  # Securely fetch the client secret
+    CLIENT_SECRET = keyring.get_password('pmereporter', 'MS_CLIENT_SECRET')  # Securely fetch the client secret
 
     if not CLIENT_SECRET:
         raise Exception("Client secret is missing or not set in the keyring.")
