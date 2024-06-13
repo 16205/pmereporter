@@ -13,6 +13,8 @@ env_path = utils.get_env_path()
 
 def fetch_and_store(date:datetime = None, departments:list=None, progress_callback=None):
     load_dotenv(env_path)
+    if not os.environ.get('MS_USER_NAME'):
+        utils.init_user()
     current_progress = 0
     if progress_callback:
         progress_callback(current_progress)  # Start with 0% progress
@@ -22,9 +24,9 @@ def fetch_and_store(date:datetime = None, departments:list=None, progress_callba
 
     depts = []
     if "North" in departments:
-        depts.extend([2, 3, 4, 19])
+        depts.extend([2, 3, 4, 19, 21])
     if "South" in departments:
-        depts.extend([5, 6, 7, 8, 9, 10, 11])
+        depts.extend([5, 6, 7, 8, 9, 10, 11, 20])
 
     try:
         missions = ingest.get_events(dateFrom, dateTo, depts)
