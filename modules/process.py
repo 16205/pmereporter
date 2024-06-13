@@ -515,7 +515,7 @@ def send_om(missions:dict, keys:list[str], sender_name:str, progress_callback=No
         # recipients_str += "]\n\n"
         # content += recipients_str
         
-        outbound.send_email(subject, ['glohest@vincotte.be'], content, attachment_path, sender_address)
+        outbound.send_email(subject, recipients, content, attachment_path, sender_address)
         
         # Update processed count and emit progress
         processed_count += 1
