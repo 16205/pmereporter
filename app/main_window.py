@@ -19,7 +19,7 @@ class CheckBoxHeader(QHeaderView):
 
     def __init__(self, orientation, parent=None):
         super(CheckBoxHeader, self).__init__(orientation, parent)
-        self.isChecked = False
+        self.isChecked = True
         self.setSectionsClickable(True)
 
     def paintSection(self, painter, rect, logicalIndex):
