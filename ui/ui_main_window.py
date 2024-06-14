@@ -8,13 +8,14 @@
 from PyQt6 import QtCore, QtGui, QtWidgets
 from PyQt6.QtCore import QDate
 from PyQt6.QtWidgets import QMessageBox
+from modules import utils
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(1120, 909)
         MainWindow.setWindowTitle("PMEReporter")
-        MainWindow.setWindowIcon(QtGui.QIcon('media/icon.png'))
+        MainWindow.setWindowIcon(QtGui.QIcon(utils.resource_path('media/icon.png')))
         
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
