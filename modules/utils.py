@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from dotenv import load_dotenv, set_key
 from modules import auth, ingest
+from pathlib import Path
 from reportlab.platypus import Paragraph
 import json
 import keyring
@@ -263,8 +264,23 @@ def init_folders():
 def get_env_path():
         # Get the path to the directory where the executable is located
         if hasattr(sys, '_MEIPASS'):
-            # If the app is running in a PyInstaller bundle, use the temporary directory
-            return os.path.join(sys._MEIPASS, '.env')
+            # If the app is running in a PyInstaller bundle, use the directory parent to the temporary directory
+            appdata_dir = Path(os.getenv('APPDATA')) / 'pmereporter'
+            env_path = appdata_dir / '.env'
+            appdata_dir.mkdir(parents=True, exist_ok=True)  # Ensure the directory exists
+            # If the.env file does not exist, create it in the current working directory
+            if not os.path.exists(env_path):
+                # Create the .env file in the env path
+                with open(env_path, 'w') as env_file:
+                    env_file.write('PPME_ENDPOINT=\'https://api.planningpme.com/vincotte/\'\n')
+                    env_file.write('PPME_BEARER_TOKEN=\'\'\n')
+                    env_file.write('MS_CLIENT_ID=\'f5e42067-90ca-4882-a3e6-36bb5b46d586\'\n')
+                    env_file.write('MS_TENANT_ID=\'7063586b-1e19-441c-965b-2ac046b85634\'\n')
+                    env_file.write('MS_ACCESS_TOKEN=\'\'\n')
+                    env_file.write('MS_REFRESH_TOKEN=\'\'\n')
+                    env_file.write('SHP_SITE_URL=\'https://vincottegroup.sharepoint.com/sites/NDT-MM\'\n')
+                    env_file.write('MS_USER_NAME=\'\'\n')
+            return env_path
         else:
             # If running in a normal Python environment, use the current working directory
             return os.path.join(os.getcwd(), '.env')
