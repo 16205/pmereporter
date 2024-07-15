@@ -99,6 +99,21 @@ def generate_pdfs(missions:dict, sources:dict, keys:list=None):
         else:
             departureplace = "" # Set departure place to empty string for use in ADR sender/receiver information, so that "None" is not displayed
 
+        # -----------Vehicle-----------
+        vehicle = mission.get('vehicle')
+        if vehicle:
+            mission_table_data.append([Paragraph("<b>Vehicle</b>"), Paragraph(f"{vehicle}")])
+        
+        # -----------Equipment-----------
+        equipments = mission.get('equipment')
+        if equipments:
+            if len(equipments) > 1:
+                for index, equipment in enumerate(equipments):
+                    mission_table_data.append([Paragraph(f"<b>Adv. equipment {index+1}</b>"), Paragraph(f"{equipment}")])
+            else:
+                for equipment in equipments:
+                    mission_table_data.append([Paragraph("<b>Adv. equipment</b>"), Paragraph(f"{equipment}")])
+
         # -----------Info/comments-----------
         comments = mission.get('comments')
         
@@ -355,8 +370,8 @@ def generate_pdfs(missions:dict, sources:dict, keys:list=None):
         # Build the PDF document
         try:
             doc.build(elements, onFirstPage=add_header_footer, onLaterPages=add_header_footer)
-        except PermissionError as e:
-            sys.exit(f"Please close the document \"{e.filename}\" and try again.")
+        except Exception as e:
+            raise Exception(f"Please close the document \"{e.filename}\" and try again.")
             
     # print("Pdfs generated!")
     return
@@ -538,6 +553,8 @@ def clean_data(missions):
             "customers": [],
             "SOnumber": None,
             "departurePlace": mission.get('fields').get('DEPARTUREPLACE') if mission.get('fields').get('DEPARTUREPLACE') != '' else None,
+            "vehicle": mission.get('fields').get('PR_INV') if mission.get('fields').get('PR_INV') != '' and mission.get('fields').get('PR_INV') != 'Raamcontract' else None,
+            "equipment": [],
             "normCr": [],
             "sources": [],
             "location": "Run get_locations()",
@@ -607,6 +624,14 @@ def clean_data(missions):
                                    mission.get('fields').get('NORMCR7')]
         # Remove empty or None values
         mission_dict['normCr'] = [normCr for normCr in mission_dict['normCr'] if normCr is not None and normCr!= '']
+
+        # Populate equipment if available
+        mission_dict['equipment'] = [mission.get('fields').get('PR_MAT1'),
+                                     mission.get('fields').get('PR_MAT2'),
+                                     mission.get('fields').get('PR_MAT3'),
+                                     mission.get('fields').get('PR_MAT4')]
+        # Remove empty or None values
+        mission_dict['equipment'] = [eq for eq in mission_dict['equipment'] if eq is not None and eq!= '']
         
         # Populate sources if available
         mission_dict['sources'] = [mission.get('fields').get('SOURCES'),

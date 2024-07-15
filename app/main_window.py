@@ -147,7 +147,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.missionTableView.setHorizontalHeader(self.CheckboxHeader)
 
         # Set column headers
-        self.missionHeaders = [None, 'Agents', 'Date & time', 'Client', 'SO n°', 'Intervention n°', 'Departure From', 'Location', 'RT Sources', 'Attachments']
+        self.missionHeaders = [None, 'Agents', 'Date & time', 'Client', 'SO n°', 'Intervention n°', 'Departure From', 'Location', 'Vehicle', 'Equipment', 'RT Sources', 'Attachments']
         self.missionModel.setHorizontalHeaderLabels(self.missionHeaders)
 
         self.apply_styleSheet(self.missionTableView)
@@ -237,13 +237,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 row.append(checkbox_item)
                 # Append other data
                 resource_names = "\n".join(f"{resource['lastName']} {resource['firstName']}" for resource in item.get('resources'))
-                sources = ""
-                for source in item.get('sources'):
-                    sources += f"{source}\n"
-                filenames = ""
-                if item.get('attachmentFileNames'):
-                    for filename in item.get('attachmentFileNames'):
-                        filenames += f"{filename}\n"
+                equipment_names = "\n".join(f"{equipment}" for equipment in item.get('equipment')) if item.get('equipment') else ''
+                source_names = "\n".join(f"{source}" for source in item.get('sources')) if item.get('sources') else ''
+                file_names = "\n".join(f"{filename}" for filename in item.get('attachmentFileNames')) if item.get('attachmentFileNames') else ''
                 row.extend([
                     QStandardItem(resource_names),
                     QStandardItem(item.get('start')),
@@ -252,8 +248,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                     QStandardItem(str(item.get('key'))),
                     QStandardItem(item.get('departurePlace')),
                     QStandardItem(item.get('location')),
-                    QStandardItem(sources),
-                    QStandardItem(filenames)
+                    QStandardItem(item.get('vehicle')),
+                    QStandardItem(equipment_names),
+                    QStandardItem(source_names),
+                    QStandardItem(file_names)
                 ])
                 # Set vertical alignment for all items in the row
                 for cell in row:
@@ -359,6 +357,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         if not utils.credentials_are_valid():
             self.open_credentials_dialog()
         if utils.credentials_are_valid():
+            self.cleanUpFolders()
             # Get the date from the dateSelector
             selected_date = self.dateSelector.date().toPyDate()  # Converts QDate to Python date
             departments = self.get_selected_items("departments") # Get departments
@@ -376,7 +375,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             QtWidgets.QMessageBox.warning(self, "No Selection", "Please select at least one mission order to generate.")
             return
         self.current_task = 'generate'  # Set the current task
-        self.message = 'Mission orders PDFs gererating'
+        self.message = 'Mission orders PDFs generating'
         self.start_thread(self.current_task, self.message, selected_keys)
 
     def send_mission_orders(self):
