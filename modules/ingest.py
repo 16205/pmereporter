@@ -21,8 +21,8 @@ def get_events(dateFrom:datetime, dateTo:datetime=None, departments:list=None, r
         dateTo (datetime, optional): The end date for the event search. Defaults to None, which will be interpreted as dateFrom.
         departments (list, optional): A list of department IDs to filter events. Defaults to None.
         resources (list, optional): A list of resource IDs to filter events. Defaults to None.
-        categories (list, optional): A list of category IDs to filter events. Defaults to [52,60,63,65,80], which corresponds respectively to
-                                                                                [Planned, Planned Nucleair, Niet factureerbaar, Opleiding-Formation, Prime Time].
+        categories (list, optional): A list of category IDs to filter events. Defaults to [52,55,60,63,65,66,76,77,81,82], which corresponds respectively to
+                                                                                [Planned, Temporary, Planned Nucleair, Niet factureerbaar, Opleiding-Formation, NO JOB, Ontw. & Interpretatie, Ontw. & Interpretatie, Planned Advanced, Temporary Advanced].
 
     Returns:
         dict: A dictionary containing the response from the PlanningPME API, including a list of events that match the criteria.
