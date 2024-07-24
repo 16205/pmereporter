@@ -585,7 +585,7 @@ def clean_data(missions):
 
         # Populate resources if available
         for resource in mission.get('resources', []):
-            if not any(x in resource.get('label') for x in ["RG -", "BUNKER ", "Vincotte", "LABO "]):
+            if not any(x in resource.get('label') for x in ["RG -", "BUNKER ", "Vincotte", "LABO ", "RX "]):
                 mission_dict['resources'].append({
                     "lastName": resource.get('lastName'),
                     "firstName": resource.get('firstName'),
