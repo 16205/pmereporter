@@ -52,7 +52,7 @@ class Ui_MainWindow(object):
         self.menuFile.addAction(self.actionExit)
 
         def showAboutDialog():
-            QMessageBox.about(None, "About App", "PMEReporter version 0.9 - ©Vinçotte ASBL - 2024\n\nDeveloped by:\nGabriel Lohest\nglohest@vincotte.be\n+32 497 87 07 60")
+            QMessageBox.about(None, "About App", "PMEReporter version 1.2 - ©Vinçotte ASBL - 2024\n\nDeveloped by:\nGabriel Lohest\nglohest@vincotte.be\n+32 497 87 07 60")
 
         # Add actions to the About menu
         self.actionAbout = QtGui.QAction("About PMEReporter", MainWindow)
