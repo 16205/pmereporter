@@ -256,7 +256,7 @@ def download_sharepoint_file(missions, access_token, min, max, progress_callback
                     filename = dir + drive_item_info.get('name')
 
                     # Raise an exception if the file extension is not pdf, Word or image, to forbid misuse by planners
-                    allowed_extensions = ['.pdf', '.doc', '.docx','.docm', '.dot', '.dotx', '.dotm', '.jpeg', '.jpg', '.png', '.heic']
+                    allowed_extensions = ['.pdf', '.doc', '.docx','.docm', '.dot', '.dotx', '.dotm', '.jpeg', '.jpg', '.png', '.heic', '.PDF', '.DOC', '.DOCX', '.DOCM', '.DOT', '.DOTX', '.DOTM', '.JPEG', '.JPG', '.PNG', '.HEIC']
                     if not any(filename.endswith(ext) for ext in allowed_extensions):
                         raise NameError(f"The provided link at:\n\nPlanningPME > mission n°{mission.get('key')} of {mission.get('start')} with {mission.get('resources')[0].get('lastName')} for {mission.get('customers')[0].get('label') if mission.get('customers') else None} > Extra info > link interventiondoc {index+1}\n\npoints to an unauthorized file type. Please use a pdf, Word document, or an image instead.")
 
