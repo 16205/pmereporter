@@ -95,6 +95,7 @@ def format_text(text):
         
         # Replace Windows line endings (\r\n) with HTML line breaks(<br/>)
         formatted_text = text.replace('\r\n', '<br/>')
+        formatted_text = text.replace('\n', '<br/>')
 
         # Remove redundant HTML line breaks
         formatted_text = re.sub(r'(<br/>){3,}', '<br/>', formatted_text)
