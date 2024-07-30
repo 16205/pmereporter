@@ -243,7 +243,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 row.extend([
                     QStandardItem(resource_names),
                     QStandardItem(item.get('start')),
-                    QStandardItem(item.get('customers')[0].get('label')),
+                    QStandardItem(item.get('customers')[0].get('label') if item.get('customers') else ''),
                     QStandardItem(item.get('SOnumber')),
                     QStandardItem(str(item.get('key'))),
                     QStandardItem(item.get('departurePlace')),
