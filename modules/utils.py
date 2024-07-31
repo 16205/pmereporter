@@ -235,6 +235,11 @@ def split_into_sentences(text):
 
     return sentences
 
+def remove_leading_dots(input_string):
+    if input_string.startswith(".."):
+        return input_string[2:]
+    return input_string
+
 def resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller.
         Converts backslashes in relative paths to forward slashes for consistency.
