@@ -57,28 +57,22 @@ def get_events(dateFrom:datetime, dateTo:datetime=None, departments:list=None, r
     else:
         sys.exit(f"Failed to retrieve data: {response.status_code}")
 
-def get_locations(missions:list, min:int, max:int, progress_callback=None):
+def get_locations(missions: list, min: int = 0, max: int = 100, progress_callback=None) -> list:
     """
-    Retrieves and appends location information for each mission in the provided list.
+    Retrieves and appends the location details to each mission in the provided list.
 
     This function iterates through a list of missions, querying an API for each mission's details to extract
     and append location information. It supports updating a progress callback function to notify about the
     progress of location retrieval.
 
     Parameters:
-        missions (list): A list of dictionaries, each representing a mission with at least a "key" for the mission ID.
-        min (int): The minimum value of the progress range, used in the progress callback.
-        max (int): The maximum value of the progress range, used in the progress callback.
-        progress_callback (function, optional): A callback function that accepts three arguments: the current progress,
-                                                 the minimum, and the maximum values of the progress range. This function
-                                                 is called after each mission's location information is retrieved.
+    - missions (list): A list of dictionaries, where each dictionary represents a mission.
+    - min (int, optional): The minimum value for the progress bar. Default is 0.
+    - max (int, optional): The maximum value for the progress bar. Default is 100.
+    - progress_callback (function, optional): A callback function to update the progress bar.
 
     Returns:
-        list: The input list of missions, with location information appended to each mission dictionary.
-
-    Raises:
-        SystemExit: If the API returns a 401 Unauthorized status code, indicating that the bearer token is invalid or expired,
-                    or if the API returns any other status code indicating failure.
+    - list: The updated list of missions, with location details appended to each mission.
     """
     
     connection_str, headers = utils.init_ppme_api_variables()
@@ -256,9 +250,9 @@ def download_sharepoint_file(missions, access_token, min, max, progress_callback
                     filename = dir + drive_item_info.get('name')
 
                     # Raise an exception if the file extension is not pdf, Word or image, to forbid misuse by planners
-                    allowed_extensions = ['.pdf', '.doc', '.docx','.docm', '.dot', '.dotx', '.dotm', '.jpeg', '.jpg', '.png', '.heic', '.PDF', '.DOC', '.DOCX', '.DOCM', '.DOT', '.DOTX', '.DOTM', '.JPEG', '.JPG', '.PNG', '.HEIC']
+                    allowed_extensions = ['.pdf', '.doc', '.docx','.docm', '.dot', '.dotx', '.dotm', '.jpeg', '.jpg', '.png', '.heic', '.xls', '.xlsx', '.PDF', '.DOC', '.DOCX', '.DOCM', '.DOT', '.DOTX', '.DOTM', '.JPEG', '.JPG', '.PNG', '.HEIC', '.XLS', '.XLSX']
                     if not any(filename.endswith(ext) for ext in allowed_extensions):
-                        raise NameError(f"The provided link at:\n\nPlanningPME > mission n°{mission.get('key')} of {mission.get('start')} with {mission.get('resources')[0].get('lastName')} for {mission.get('customers')[0].get('label') if mission.get('customers') else None} > Extra info > link interventiondoc {index+1}\n\npoints to an unauthorized file type. Please use a pdf, Word document, or an image instead.")
+                        raise NameError(f"The provided link at:\n\nPlanningPME > mission n°{mission.get('key')} of {mission.get('start')} with {mission.get('resources')[0].get('lastName')} for {mission.get('customers')[0].get('label') if mission.get('customers') else None} > Extra info > link interventiondoc {index+1}\n\npoints to an unauthorized file type. Please use a pdf, Word or Excel document, or an image instead.")
 
                     graph_url = drive_item_info.get('@microsoft.graph.downloadUrl')
                     response = requests.get(graph_url, headers=headers)
