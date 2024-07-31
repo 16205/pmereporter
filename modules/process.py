@@ -165,21 +165,27 @@ def generate_pdfs(missions:dict, sources:dict, keys:list=None):
         elements.append(mission_table)
 
         # Norms & criteria
-        norm_crit_list = mission.get('normCr')
+        norm_crit_list = mission.get('normCr', [])
+        techniques_list = mission.get('techniques', [])
         
-        # Check if any norms or criteria are present
-        if any(norm_crit_list):        
-            # -----------Norms & criteria heading-----------
-            elements.append(Paragraph("Norms & criteria", styles['Heading4']))
+        # Check if any techniques, norms or criteria are present
+        if any(norm_crit_list) or any(techniques_list):
+            # -----------Techniques, Norms & Criteria heading-----------
+            elements.append(Paragraph("Techniques, Norms & Criteria", styles['Heading4']))
+            
+            tech_norm_crit_table_data = []
 
-            norm_crit_table_data = []
+            k = 1
+            for technique in techniques_list:
+                tech_norm_crit_table_data.append([Paragraph(f"<b>Technique {k}</b>"), Paragraph(technique)])
+                k += 1
 
             j = 1
             for norm_crit in norm_crit_list:
-                norm_crit_table_data.append([Paragraph(f"<b>Norm/Criteria {j}</b>"), Paragraph(norm_crit)])
+                tech_norm_crit_table_data.append([Paragraph(f"<b>Norm/Criteria {j}</b>"), Paragraph(norm_crit)])
                 j += 1
 
-            norm_crit_table = Table(norm_crit_table_data, colWidths=[111, None])
+            norm_crit_table = Table(tech_norm_crit_table_data, colWidths=[111, None])
             norm_crit_table.setStyle(style)
 
             elements.append(norm_crit_table)
@@ -555,6 +561,7 @@ def clean_data(missions):
             "departurePlace": mission.get('fields').get('DEPARTUREPLACE') if mission.get('fields').get('DEPARTUREPLACE') != '' else None,
             "vehicle": mission.get('fields').get('PR_INV') if mission.get('fields').get('PR_INV') != '' and mission.get('fields').get('PR_INV') != 'Raamcontract' else None,
             "equipment": [],
+            "techniques": [],
             "normCr": [],
             "sources": [],
             "location": "Run get_locations()",
@@ -614,6 +621,12 @@ def clean_data(missions):
                                                     customer.get('mobile') != customer.get('phone') else None,
             })
 
+        # Populate techniques if available
+        mission_dict['techniques'] = [mission.get('fields').get('JOBSEL1'),
+                                     mission.get('fields').get('JOBSEL2')]
+        # Remove empty or None values
+        mission_dict['techniques'] = [technique for technique in mission_dict['techniques'] if technique is not None and technique!= '']
+
         # Populate normCr if available
         mission_dict['normCr'] = [mission.get('fields').get('NORMCR1'), 
                                    mission.get('fields').get('NORMCR2'), 
@@ -646,9 +659,12 @@ def clean_data(missions):
 
         # Populate attachment links if available
         mission_dict['attachmentLinks'] = [mission.get('fields').get('SALESORDER2'),
-                                           mission.get('fields').get('SALESORDER4')]
-        # Remove empty or None values
-        mission_dict['attachmentLinks'] = [link for link in mission_dict['attachmentLinks'] if link is not None and link!= '' and link != '..']
+                                           mission.get('fields').get('SALESORDER4')
+                                        #    mission.get('project').get('fields').get('GPINFO'),
+                                        #    mission.get('customers')[0].get('fields').get('CU_INFORMATION')
+                                           ]
+        # Remove empty or None values and remove leading dots
+        mission_dict['attachmentLinks'] = [utils.remove_leading_dots(link) for link in mission_dict['attachmentLinks'] if link is not None and link!= '' and link != '..']
 
         missions_cleaned.append(mission_dict)
 
