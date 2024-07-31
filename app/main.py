@@ -1,4 +1,5 @@
 from datetime import datetime, time
+import calendar
 import json
 import os
 import sys
@@ -6,7 +7,7 @@ from dotenv import load_dotenv
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from modules import auth, ingest, process, utils
 
-date = datetime(2023, 11, 21)
+date = datetime(2024, 7, 30)
 # dateTo = datetime(2023, 11, 21, 23, 59, 59, 999)
 
 env_path = utils.get_env_path()
@@ -135,8 +136,27 @@ def check_sources_conflicts():
         result = process.check_sources_double_bookings(missions)
     return result
 
+def generate_ADR_monthly_transports_list(date: datetime=datetime(2024, 7, 1)):
+    monthrange = calendar.monthrange(date.year, date.month)
+
+    dateFrom = date.replace(day=1)
+    dateTo = date.replace(day=monthrange[1])
+
+    missions = ingest.get_events(dateFrom, dateTo)
+    missions = process.clean_data(missions)
+    rt_missions = process.filter_rt_missions(missions)
+    rt_missions = ingest.get_locations(rt_missions)
+    utils.save_to_json('temp/rt_missions.json', rt_missions)
+    try:
+        sources = ingest.get_sources()
+    except:
+        sources = ingest.get_sources()
+    process.generate_ADR_transport_list(rt_missions, sources)
+    return rt_missions
+
 # fetch_and_store(date, ['South'])
 # generate(None)
 # send(None)
 # check_sources_conflicts()
-# get_sent_elements()
+# get_sent_elements() 
+# generate_ADR_monthly_transports_list()

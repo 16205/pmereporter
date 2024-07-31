@@ -139,11 +139,16 @@ class Ui_MainWindow(object):
         self.tab1layout.addLayout(self.leftVerticalLayout, 4) # 80% of space
         self.tab1layout.addLayout(self.rightVerticalLayout, 1) # 20% of space
 
-        # ------------------ Second tab ------------------
-        self.tab2 = QtWidgets.QWidget()
-        self.tab2.setObjectName("tab2")
-        # self.tabWidget.addTab(self.tab2, "PLACEHOLDER")
+        # # ------------------ Second tab ------------------
+        # self.tab2 = QtWidgets.QWidget()
+        # self.tab2.setObjectName("tab2")
+        # self.tabWidget.addTab(self.tab2, "ADR Monthly Transport List")
 
+        # # ------------------ Second tab horizontal layout ------------------
+        # self.tab2layout = QtWidgets.QHBoxLayout(self.tab2) # Assign layout to the tab
+
+        
+        
         MainWindow.setCentralWidget(self.tabWidget)
         self.statusbar = QtWidgets.QStatusBar(MainWindow)
         MainWindow.setStatusBar(self.statusbar)

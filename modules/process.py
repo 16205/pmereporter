@@ -601,7 +601,8 @@ def clean_data(missions):
                                                         resource.get('phone') != resource.get('mobile') else None,
                     "email": re.sub(r';.*$', '', resource.get('email')),    # Remove anything after the first semicolon (some agents have
                                                                             # multiple email addresses registered in the same field),
-                    "AVnumber": resource.get('registrationNumber')
+                    "AVnumber": resource.get('registrationNumber'),
+                    "ADR": True if "ADR" in resource.get('label') else False
 })
                 
         # Populate comments if available
@@ -669,3 +670,13 @@ def clean_data(missions):
         missions_cleaned.append(mission_dict)
 
     return missions_cleaned
+
+def filter_rt_missions(missions):
+    rt_missions = []
+    for mission in missions:
+        if mission['sources']:
+            rt_missions.append(mission)
+    return rt_missions
+
+def generate_ADR_transport_list(missions, sources):
+    pass
